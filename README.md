@@ -1,85 +1,58 @@
 # Ratchet Rust
 
-Migración en curso del backend de Ratchet-SQLite a Rust para Cloudflare Workers.
-**Todavía no es una aplicación completa ni está lista para desplegar.**
+Backend de Ratchet en Rust/WASM para Cloudflare Workers, con interfaz React y API desde el mismo origen. La migración implementa las 74 rutas activas de Ratchet-SQLite y está desplegada en un staging nuevo e independiente. No utiliza un backend TypeScript de respaldo.
 
-## Alcance y estado
+72 rutas tienen handlers operativos y las dos rutas de inscripción de passkeys conservan el HTTP 410 `ACCESS_PASSKEY_ENROLLMENT_DISABLED` intencional de la referencia. El login y reauth con passkeys existentes están implementados. La matriz de las 74 rutas tiene evidencia local y referencias a código y pruebas.
 
-La interfaz React procede de la copia local actual, con hashes de procedencia en
-`baseline/source-manifest.json`. `baseline/routes.json` inventaría 77 declaraciones
-de rutas, 74 no reemplazadas por otra ruta anterior. La compilación parcial Rust
-expone deliberadamente `migration_ready: false`.
-La matriz distingue 24 rutas ejercitadas localmente y 50 pendientes; esos
-24 contratos no equivalen a la aceptación integral del producto.
+## Funcionalidad
 
-Implementados: validación de mensajes y recibos, reglas de permisos, primitivas
-de almacenamiento cifrado, firmas Ed25519, contraseñas PBKDF2, seguridad HTTP,
-lectura de sesiones, login/reauth por contraseña y llave portable, bootstrap de
-owner y creación de administradores con firma de owner.
-El dominio tiene pruebas nativas y los primeros handlers ya pasaron pruebas en
-workerd local. WSS, SQLite cifrado, deduplicación, sincronización y recibos están
-integrados y probados con 30 mensajes simultáneos. Logout y revocación de sesiones
-y dispositivos invalidan los canales afectados mediante un control recuperable;
-los demás participantes conservan su conexión. Administración completa, altas de
-clientes, passkeys, adjuntos, fondos, push y paridad integral siguen pendientes.
+- Contraseña PBKDF2, llaves portables firmadas y passkeys ES256/RS256/Ed25519; bootstrap, activación, sesiones, dispositivos, certificados y prekeys.
+- Administradores independientes, agentes mediante enlaces de uso único, invitaciones, invitados y clientes. Consola owner con operaciones firmadas y recuperación conservando historial.
+- Chat HTTP/WSS en Durable Objects SQLite, almacenamiento AES-GCM/HKDF/HMAC, cola FIFO, ACK posterior a durabilidad, deduplicación, secuencias, sync paginado, recibos, batch y estadísticas proyectadas.
+- Revocación recuperable que cerca los chats afectados, confirma la mutación con su marcador D1 y revalida conexiones. Reintentos de control y proyección sobreviven a reinicios del objeto.
+- Adjuntos multipart R2, validación de tamaño/ETag, claims y compensación; fondos compartidos por cuenta; Web Push y mantenimiento programado.
 
-Se iniciará con bases vacías. El esquema nuevo está en
-`db/migrations/0001_ratchet_rust.sql`; se retiraron las 26 migraciones históricas
-y las tablas antiguas de mensajes D1. No se importará historial de prueba.
-Los recursos Cloudflare existentes no fueron modificados.
+La instalación empieza vacía con `db/migrations/0001_ratchet_rust.sql`. No importa cuentas, secretos ni historial de otros despliegues. `baseline/source-manifest.json` conserva la procedencia y `baseline/routes.json` documenta implementación y evidencia.
 
-## Entorno
+## Modelo de cifrado
 
-Versiones fijadas: Rust 1.99.0, worker/worker-build 0.8.7 y dependencias estables
-actuales en `Cargo.toml`/`Cargo.lock`. Las dependencias de la interfaz están
-fijadas en `package-lock.json`; typecheck y build Vite pasaron. La paridad de uso
-del navegador con todos los endpoints Rust sigue pendiente.
+Los mensajes viajan por HTTPS/WSS y el servidor puede leer su contenido, igual que en el prototipo de referencia actual. El almacenamiento del servidor usa AES-GCM; la caché y la cola local del navegador permanecen cifradas. **Los mensajes no se presentan como cifrado de extremo a extremo.** Los adjuntos y fondos sí se cifran en el cliente. El transporte explícito está en `src/client/crypto/server-message-transport.ts`.
 
-Comprobación sin instalar nada:
+## Validación
+
+La regresión integrada final pasó **31/31 contratos** en 81,208 s, incluidos navegador real, owner, identidad, administración, archivos, metadatos y carga. Pasaron también las suites Rust de workspace, tres pruebas criptográficas, cinco pruebas de herramientas, tipos/build del cliente y auditoría npm sin vulnerabilidades. El lote de 1.000 mensajes desde 20 cuentas terminó en 16,033 s y se recuperó en cinco páginas sin pérdida ni duplicación.
+
+En Cloudflare pasó el recorrido completo de Chrome de escritorio/móvil: login, invitación y cliente, mensajes, gestos táctiles, teclado móvil, tres archivos descargados con SHA-256 idéntico, fondo de 400 KB renderizado con píxeles idénticos, recarga y offline/reconexión. Pasaron además la ráfaga WSS remota de 30 en orden, sync HTTPS exacto, reconexión, logout con cierre 4001 sin desconectar al cliente restante y consola Python con llave cifrada. La configuración push remota devuelve enabled=true.
+
+Una ejecución de carga anterior se detuvo en 100 de 1.000 mensajes; no se atribuye una causa sin evidencia. El caso focalizado y la regresión integrada posterior pasaron. [VALIDATION.md](docs/VALIDATION.md) registra la muestra, las métricas y su alcance.
+
+## Comandos reproducibles
+
+Versiones fijadas: Rust 1.99.0, worker/worker-build 0.8.7, Wrangler 4.151.0, React 19.3.1 y Vite 8.3.4. Se utilizan las herramientas y dependencias ya disponibles; estos scripts no instalan paquetes.
 
 ```powershell
-node scripts/check-toolchain.mjs
+npm run verify
 ```
 
-Preparación del entorno cuando corresponda:
+`verify` comprueba toolchain, formato, Clippy nativo/WASM, pruebas Rust/crypto/herramientas, tipos del cliente, empaquetado y todos los contratos locales. Usa D1/R2/DO efímeros y secretos sintéticos; restaura `.dev.vars`. El navegador requiere Chrome y la consola usa Python ya preparado.
 
 ```powershell
-rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
-cargo +1.99.0 install worker-build --version 0.8.7 --locked
+npm run build
+npm run deploy:staging
+npm run test:staging
 ```
 
-Pruebas y compilación:
+`deploy:staging` valida el nombre de los recursos aislados, prepara secretos locales ignorados, hace dry-run, aplica el esquema nuevo y despliega. `test:staging` utiliza el staging dedicado, provisión firmada, navegador real, transporte remoto y consola nativa. La llave cifrada y las credenciales sintéticas quedan en archivos locales ignorados, nunca en Git.
 
-```powershell
-cargo test -p ratchet-core --locked
-cargo check -p ratchet-worker --target wasm32-unknown-unknown --locked
-cargo fmt --all --check
-cargo clippy -p ratchet-core --all-targets --locked -- -D warnings
-node --test tests/tooling/*.test.mjs
-```
+## Staging y documentación
 
-La comprobación actual usa Rust 1.99.0 y worker-build 0.8.7, preparados por el
-usuario. Pasaron 25 pruebas Rust, 5 de herramientas Node y 9 contratos en workerd
-local. También compilan la interfaz y sus tipos con las dependencias fijadas.
-Los vectores criptográficos de `baseline/` son sintéticos y públicos.
+[ratchet-rust-staging-20261015.braian-n-l.workers.dev](https://ratchet-rust-staging-20261015.braian-n-l.workers.dev) utiliza Worker, D1, R2 y Durable Objects nuevos, aislados de Ratchet-SQLite mediante `wrangler.staging.jsonc`.
 
-Para empaquetar y ejecutar contratos locales:
-
-```powershell
-Push-Location crates/worker
-worker-build --release --no-opt
-Pop-Location
-npm run test:contracts
-```
-
-La build conserva metadatos externos de WASM (`strip = "debuginfo"`), necesarios
-por [workers-rs #1014](https://github.com/cloudflare/workers-rs/issues/1014).
-Los contratos crean bases locales efímeras y restauran `.dev.vars` al terminar.
-Las fixtures se escriben sólo en la base efímera del owner sintético de esa
-ejecución. No importan cuentas ni secretos de otros despliegues.
-
-## Documentación
-
+- [Validación y métricas](docs/VALIDATION.md)
 - [Diseño](docs/superpowers/specs/2026-10-15-ratchet-rust-design.md)
 - [Plan](docs/superpowers/plans/2026-10-15-ratchet-rust.md)
-- [Progreso y decisiones](docs/MIGRATION_PROGRESS.md)
+- [Historial de decisiones](docs/MIGRATION_PROGRESS.md)
+
+La publicación del commit y del código remoto se registra cuando se complete; este documento no afirma un push todavía.
+
+Cierre final: 35 pruebas Rust + 3 criptográficas + 5 de herramientas + 31 contratos integrados aprobados. Staging verificado y matriz completa; métricas y SHA-256 del artefacto en [validation-results.json](docs/validation-results.json).

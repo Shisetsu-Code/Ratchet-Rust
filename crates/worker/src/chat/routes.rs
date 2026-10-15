@@ -66,6 +66,47 @@ pub async fn handle(request: &mut Request, env: &Env) -> ApiResult<Response> {
     let meta = authority(&auth, chat_id);
     let method = request.method();
     let suffix = parts[1..].join("/");
+    if method == Method::Get && suffix.is_empty() {
+        return super::metadata::detail(env, &auth, chat_id).await;
+    }
+    if method == Method::Post && suffix == "messages/batch" {
+        let body: Value = http::read_json(request, 2 * 1024 * 1024).await?;
+        let messages = body["messages"]
+            .as_array()
+            .filter(|m| (1..=10).contains(&m.len()))
+            .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+        if body.as_object().is_none_or(|m| m.len() != 1) {
+            return Err(ApiError::domain("VALIDATION_ERROR", 422));
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        let mut parsed = vec![];
+        for value in messages {
+            let input: SendRequest = serde_json::from_value(value.clone())
+                .map_err(|_| ApiError::domain("VALIDATION_ERROR", 422))?;
+            if !ids.insert(input.client_message_id.clone()) {
+                return Err(ApiError::domain("VALIDATION_ERROR", 422));
+            }
+            parsed.push(input);
+        }
+        let mut committed = vec![];
+        for input in parsed {
+            let mut response = forward(
+                env,
+                Call {
+                    op: "send".into(),
+                    authority: meta.clone(),
+                    data: serde_json::to_value(input)
+                        .map_err(|_| ApiError::domain("VALIDATION_ERROR", 422))?,
+                },
+            )
+            .await?;
+            if !(200..=201).contains(&response.status_code()) {
+                return Ok(response);
+            }
+            committed.push(response.json::<Value>().await?);
+        }
+        return http::json(&json!({"messages":committed}));
+    }
     let (op, data) = match (method, suffix.as_str()) {
         (Method::Get, "realtime") => {
             if request.headers().get("Origin")?.as_deref()

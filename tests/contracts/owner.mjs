@@ -1,0 +1,48 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {generateKeyPairSync,randomUUID,randomBytes,sign,pbkdf2Sync,createCipheriv} from 'node:crypto';
+import {writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import WebSocket from 'ws';
+import {base,fixture,localSql,api} from './fixtures.mjs';
+const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
+test('signed owner console binds the operation, recovers accounts, closes WSS and preserves readable history',{timeout:60000},async()=>{
+  const owner=await fixture(),victim=await fixture(),foreign=await fixture(),key=randomUUID(),keys=generateKeyPairSync('ed25519'),now=new Date().toISOString(),chat=randomUUID();
+  const oldPassword='Before recovery strong password',newPassword='After recovery strong password',salt=randomBytes(16),verifier=pbkdf2Sync(oldPassword,salt,600000,32,'sha256');
+  const login='victim-'+randomUUID();
+  await localSql(`UPDATE workspace_staff SET staff_role='OWNER' WHERE user_id='${owner.user_id}';
+INSERT INTO portable_key_credentials(key_id,user_id,public_key,label,created_at) VALUES('${key}','${owner.user_id}','${keys.publicKey.export({format:'jwk'}).x}','Synthetic owner key','${now}');
+INSERT INTO workspace_memberships(workspace_id,user_id,role,status,created_at) VALUES('${owner.workspace_id}','${victim.user_id}','ADMIN','ACTIVE','${now}');
+INSERT INTO workspace_staff(workspace_id,user_id,staff_role,display_name,created_by_user_id,created_at) VALUES('${owner.workspace_id}','${victim.user_id}','ADMIN','Victim','${owner.user_id}','${now}');
+INSERT INTO password_credentials(user_id,login_name,algorithm,iterations,salt,verifier,created_at,updated_at) VALUES('${victim.user_id}','${login}','PBKDF2-SHA256',600000,'${salt.toString('base64url')}','${verifier.toString('base64url')}','${now}','${now}');
+INSERT INTO chats(chat_id,workspace_id,created_by_user_id,created_at) VALUES('${chat}','${owner.workspace_id}','${victim.user_id}','${now}');
+INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`);
+  const prepare=operation=>api('/owner-console/prepare',{body:{owner_key_id:key,operation}});
+  const proof=c=>sign(null,Buffer.from(canonical(c)),keys.privateKey).toString('base64url');
+  const execute=async operation=>{const p=await prepare(operation);assert.equal(p.status,200,JSON.stringify(p.value));const body={challenge_id:p.value.challenge_id,signature:proof(p.value),operation};return{body,result:await api('/owner-console/complete',{body})};};
+  const listed=await execute({type:'accounts.list',limit:100});assert.equal(listed.result.status,200,JSON.stringify(listed.result.value));assert.ok(listed.result.value.accounts.some(v=>v.user_id===victim.user_id));assert.ok(!listed.result.value.accounts.some(v=>v.user_id===foreign.user_id));
+  const keyPassword=randomBytes(32).toString('base64url'),keySalt=randomBytes(16),iv=randomBytes(12),jwk=keys.privateKey.export({format:'jwk'});
+  const metadata={format:'ratchet-portable-key',version:1,key_id:key,public_key:jwk.x,kdf:{name:'PBKDF2-SHA256',iterations:600000,salt:keySalt.toString('base64url')},cipher:{name:'AES-256-GCM',iv:iv.toString('base64url')}};
+  const cipher=createCipheriv('aes-256-gcm',pbkdf2Sync(keyPassword,keySalt,600000,32,'sha256'),iv);cipher.setAAD(Buffer.from(JSON.stringify(metadata)));
+  const encrypted=Buffer.concat([cipher.update(JSON.stringify({private_seed:jwk.d,public_key:jwk.x})),cipher.final(),cipher.getAuthTag()]);
+  const keyPath=join(process.env.RATCHET_TEST_STATE,'synthetic-owner.ratchet-key');await writeFile(keyPath,JSON.stringify({...metadata,cipher:{...metadata.cipher,ciphertext:encrypted.toString('base64url')}}));
+  const native=spawnSync(process.env.RATCHET_PYTHON??'python',['tests/contracts/native-console.py'],{encoding:'utf8',windowsHide:true,env:{...process.env,RATCHET_TEST_OWNER_FILE:keyPath,RATCHET_TEST_OWNER_PASSWORD:keyPassword}});assert.equal(native.status,0,native.stderr);assert.equal(JSON.parse(native.stdout).native_console_verified,true);
+  assert.equal((await api('/owner-console/complete',{body:listed.body})).status,409);
+  const p=await prepare({type:'accounts.list'});const tampered=await api('/owner-console/complete',{body:{challenge_id:p.value.challenge_id,signature:proof(p.value),operation:{type:'conversations.list'}}});assert.equal(tampered.status,403);
+  const client=randomUUID();const content={protocol:'secure-message-content',v:2,chat_id:chat,client_message_id:client,sender_user_id:victim.user_id,sender_device_id:victim.device_id,message_type:'MESSAGE',text:'History survives signed recovery',attachments:[],mutation:null,reply_to_message_id:null};
+  const sent=await api(`/chats/${chat}/messages`,{cookie:victim.cookie,body:{client_message_id:client,sender_sequence:1,envelopes:[{recipient_user_id:owner.user_id,recipient_device_id:owner.device_id,protocol:'secure-messaging',protocol_version:2,header:'server-sqlite-v1',ciphertext:Buffer.from(JSON.stringify(content)).toString('base64url')}],attachment_ids:[]}});assert.equal(sent.status,201,JSON.stringify(sent.value));
+  const socket=new WebSocket(base.replace('http','ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:victim.cookie,Origin:base}});
+  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('WSS not ready')),10000);socket.on('message',raw=>{if(JSON.parse(raw).type==='realtime.ready'){clearTimeout(timer);resolve();}});socket.on('error',reject);});
+  try{
+    const closed=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Recovery left WSS active')),10000);socket.once('close',code=>{clearTimeout(timer);resolve(code);});});
+    const recovered=await execute({type:'account.recover',user_id:victim.user_id,new_password:newPassword});assert.equal(recovered.result.status,200,JSON.stringify(recovered.result.value));assert.equal(recovered.result.value.recovered,true);assert.equal(await closed,4001);
+    assert.ok([401,403].includes((await api('/sessions/current',{cookie:victim.cookie})).status));
+    const loginBody=password=>({login_name:login,password,device:{mode:'new',device_id:randomUUID(),display_name:'Recovered browser',crypto_identity_public_key:'D'.repeat(43)}});
+    assert.equal((await api('/auth/password/login',{body:loginBody(oldPassword)})).status,401);
+    assert.equal((await api('/auth/password/login',{body:loginBody(newPassword)})).status,200);
+    const history=await execute({type:'conversation.read',chat_id:chat,after_revision:0,limit:100});assert.equal(history.result.status,200,JSON.stringify(history.result.value));assert.equal(history.result.value.changes.length,1);assert.equal(JSON.parse(Buffer.from(history.result.value.changes[0].envelope.ciphertext,'base64url')).text,content.text);
+    const outsider=await execute({type:'account.recover',user_id:foreign.user_id,new_password:newPassword});assert.equal(outsider.result.status,403);
+    const self=await execute({type:'account.recover',user_id:owner.user_id,new_password:newPassword});assert.equal(self.result.status,403);
+  }finally{socket.terminate();}
+});

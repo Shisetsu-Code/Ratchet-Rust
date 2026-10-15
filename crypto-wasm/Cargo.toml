@@ -2,7 +2,7 @@
 name = "ratchet-crypto-wasm"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.98.1"
+rust-version = "1.99.0"
 license = "MIT"
 publish = false
 
@@ -11,10 +11,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 getrandom = { version = "=0.4.3", features = ["wasm_js"] }
-rand = "=0.10.2"
-wasm-bindgen = "=0.2.128"
+rand = "=0.10.3"
+wasm-bindgen = "=0.2.129"
 xeddsa = "=1.1.0"
-zeroize = "=1.9.0"
+zeroize = "=1.9.1"
 
 [lints.rust]
 unsafe_code = "forbid"

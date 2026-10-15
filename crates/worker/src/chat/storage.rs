@@ -262,7 +262,7 @@ impl Store {
             if row.metadata.sender_sequence!=expected{return Err(DomainError::sequence(expected).into());}
             let now=Date::now().as_millis() as i64;
             sql.exec("DELETE FROM send_quota WHERE at<=?",vec![(now-10_000).into()])?;
-            if number(&sql,"SELECT COUNT(*) AS n FROM send_quota WHERE user_id=?",vec![row.metadata.sender_user_id.clone().into()])?>=100{return Err(ApiError::domain("MESSAGE_RATE_LIMITED",503));}
+            if number(&sql,"SELECT COUNT(*) AS n FROM send_quota WHERE user_id=?",vec![row.metadata.sender_user_id.clone().into()])?>=100{return Err(ApiError::retryable("MESSAGE_RATE_LIMITED",503));}
             sql.exec("INSERT INTO send_quota VALUES(?,?)",vec![row.metadata.sender_user_id.clone().into(),now.into()])?;
             let mutation=row.metadata.mutation.as_ref().map(|s|serde_json::from_str::<Value>(s)).transpose().map_err(|_|ApiError::domain("VALIDATION_ERROR",422))?;
             if mutation.is_some()&&!can_mutate{return Err(ApiError::domain("MESSAGE_MUTATION_FORBIDDEN",403));}

@@ -46,3 +46,48 @@
 - Pendientes: passkeys y activación de cliente; operadores/invitaciones/clientes y consola owner completa; claims/adjuntos/fondos/push; batch de mensajes/proyección y mantenimiento; E2E integral, carga, revisión final y staging Rust independiente. No es todavía una migración completa ni un despliegue listo.
 - Matriz actualizada con evidencia por ruta: 24 verificadas localmente / 74 rutas activas, 50 pendientes. Las pruebas de recuperación SQL verifican el commit tardío y fence tardío; todavía falta inyección de fallos end-to-end de alarma/evicción en workerd.
 - Última regresión completa: 9/9 contratos; ráfaga local de 30 mensajes en 204,7 ms, media individual 118 ms y p95 198,1 ms. Es una muestra local variable, no una medición de latencia geográfica ni una garantía de rendimiento.
+
+## Implementación completa y aceptación final abierta — 2026-10-15
+
+Esta sección sustituye los estados parciales anteriores; las secciones previas conservan el historial real de la migración.
+
+- [x] Implementadas en Rust las 74 rutas activas de referencia, sin fallback al backend TypeScript. La matriz activa contiene 72 handlers operativos y dos respuestas 410 intencionales para inscripción de passkeys; login/reauth con passkeys existentes está implementado.
+- [x] `baseline/routes.json` actualizado con módulo Rust y pruebas por ruta. Distingue 70 rutas con evidencia local directa/navegador, tres con evidencia de módulo y una con contrato negativo. No se convierte ausencia de prueba individual en una afirmación de cobertura completa.
+- [x] Autenticación, dispositivos, certificados, prekeys, activación, agentes/grants, invitaciones/clientes y consola owner integrados. Recuperación owner firmada probada con cliente Python real, cierre WSS e historial conservado.
+- [x] Chat batch, metadatos y proyección, adjuntos R2 y claims, fondos cifrados por cuenta, suscripciones/envío Web Push y mantenimiento implementados. La prueba de metadatos también comprueba limpieza local programada de una carga expirada.
+- [x] Corregido hallazgo de revisión: alta de cliente usa INSERT de credenciales y rechaza contraseña preexistente; sólo ADMIN puede hacer reset. El caso negativo de OPERATOR prueba que la contraseña original sigue funcionando. Se mantiene dentro de la regresión final pendiente.
+- [x] Evidencia conocida: 28 pruebas Rust de workspace, tres criptográficas y cinco de herramientas; 29 contratos de ejecución previa y metadatos comprobado aparte. No se presentan como una única ejecución final posterior a todo cambio.
+- [x] Carga local ejercitada: ráfagas de 20/30, varias cuentas, 1.000 mensajes, 10/s sostenidos y rechazo de cuota. Los tests calculan percentiles y comprueban recuperación exacta por ACK durable; no se extrapolan métricas WAN.
+- [x] Recorrido completo de Chrome real pasado en escritorio y móvil: login, invitación, entrada/conversión del invitado, mensajes por HTTPS/WSS con cifrado en reposo, recarga, opciones y gestos táctiles, teclado reducido, tres archivos juntos descargados con SHA-256 idéntico, fondo de 400 KB renderizado con píxeles idénticos, destinatario/remitente offline y reconexión.
+- Ruling de diagnóstico: el gesto horizontal de Chrome producía navegación nativa tras `pushState` sin llamada JS a `history.back`. `pan-y` no bastaba; listener touchmove no pasivo cancela temprano el gesto reconocido. La limpieza de historial se serializa para cubrir también la carrera close/open. El recorrido posterior pasó con los gestos presentes.
+- Ruling CSP: no abrir `connect-src` para el test. La comprobación del fondo usa Image/canvas y píxeles reales en lugar de `fetch(blob:)` bloqueado por la política.
+- [x] Staging nuevo configurado en `https://ratchet-rust-staging-20261015.braian-n-l.workers.dev`, con D1/R2/DO nuevos y aislados. Esquema vacío; sin reutilización de datos/secretos de referencia.
+- [ ] Última regresión consolidada de todos los módulos después de los cambios finales, formato/Clippy, revisión y empaquetado final.
+- [ ] Smoke y recorrido funcional remoto del staging nuevo; entrega Web Push externa y fallos remotos de alarma/evicción siguen sin acreditación integral.
+- [ ] Publicación de código/resultados finales. Esta sección no afirma commits/push nuevos.
+
+Evidencia, comandos, capturas y reservas detalladas en `docs/VALIDATION.md`. La implementación completa y la aceptación final son estados distintos; los pendientes anteriores son de validación/publicación, no handlers omitidos.
+
+## Cierre integrado local y remoto — 2026-10-15
+
+Esta sección es el estado vigente y sustituye las reservas de aceptación anteriores.
+
+- [x] Las 74 rutas activas de la matriz tienen implementación Rust y evidencia local. Las dos rutas de inscripción de passkeys responden 410 por contrato; no hay endpoints pendientes de portado. Añadidas aserciones individuales de grantsGET, nombrePATCH/lease, envelopesPOST y pushconfig200.
+- [x] Regresión integrada: 31/31 contratos, cero fallos, 81,208 s. Lote 1.000 desde 20 cuentas: 16,0327 s y cinco páginas de recuperación, IDs únicos sin pérdida ni duplicación. Pruebas Rust de workspace, tres crypto, cinco herramientas, tipos/build, formato/Clippy y npm audit 0 comprobados durante el cierre.
+- [x] Staging nuevo desplegado y aislado en `https://ratchet-rust-staging-20261015.braian-n-l.workers.dev`. Chrome remoto completo aprobado en 55,518 s de proceso: escritorio/móvil, gestos reales, mensajes, tres archivos descargados con SHA-256 igual, fondo 400 KB con píxeles iguales, reload y offline/reconnect.
+- [x] Transporte remoto de 30: total 453 ms, media 403 ms, p95 436 ms de llegada WSS medida en Node; no es render DOM. Publicación 1..30, sync HTTPS 30 exactos, reconexión, logout 4001 y continuidad del otro cliente aprobados. Consola Python remota con llave cifrada aprobada; pushconfig enabled=true.
+- [x] Corregidos guard de credencial frente a OPERATOR, gesto nativo Chrome, reintentos durables de control/proyección, nombre visible reflejado en leases y publicación FIFO independiente. El fallo remoto anterior 2..30,1 quedó cubierto por la comprobación de orden real posterior.
+- Ruling de confidencialidad: el transporte actual de mensajes es legible por el servidor sobre HTTPS/WSS, como el prototipo de referencia. AES-GCM protege almacenamiento servidor y la caché/outbox local está cifrada. No se afirma E2EE de mensajes. Adjuntos y fondos sí se cifran en el cliente.
+- Reserva de carga concreta: una ejecución anterior quedó en 100 de 1.000 sin causa aislada; el caso focalizado (~14 s) y la regresión integrada posterior pasaron. No se atribuye a infraestructura ni lógica sin evidencia.
+- [x] Documentados scripts de verificación local y despliegue/prueba del staging, sin instalación de herramientas.
+- [ ] Registrar repeticiones tras retirar trazas temporales, separadas del resultado 31/31 ya obtenido.
+- [ ] Publicar commit/código/resultados; no se afirma un push nuevo hasta hacerlo.
+
+La entrega física de push y campañas adicionales de fallos de infraestructura son ampliaciones operativas opcionales, no rutas sin portar ni una auditoría abierta que impida cerrar la migración. Evidencia y comandos en `docs/VALIDATION.md`.
+
+## Artefacto de cierre
+
+- Regresión final sin trazas: 31/31 en 80,136 s; 35 pruebas Rust, 3 crypto y 5 tooling; formato, Clippy, typecheck, build y npm audit (0) comprobados.
+- Generador sostenido corregido para no recuperar retrasos como ráfagas; cuotas temporales CUSTOMER reintentables. Ráfagas, 1.000 mensajes y recuperación volvieron a pasar. Se conserva la incidencia no reproducida sin atribuir causa.
+- Worker remoto 0e3e6029-5158-4ea2-a031-6950b74038ce: health Rust migration_ready=true; navegador completo y última ráfaga30 ordenada, sync, revocación4001 y consola cifrada aprobados.
+- Resultado reproducible/limitaciones en docs/validation-results.json. Publicación de este cierre en main del repositorio dedicado; no hay cambios en el despliegue de referencia.

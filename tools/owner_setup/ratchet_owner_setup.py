@@ -45,7 +45,7 @@ except ImportError:
     raise SystemExit(2)
 
 
-DEFAULT_URL = "http://localhost:8787"
+DEFAULT_URL = os.environ.get("RATCHET_RUST_ORIGIN", "http://localhost:8797")
 KDF_ITERATIONS = 600_000
 MAX_RESPONSE_BYTES = 65_536
 MAX_KEY_FILE_BYTES = 65_536

@@ -13,10 +13,32 @@ use worker::*;
 
 pub const NAME: &str = "ratchet-rust-control-v1";
 
+pub struct MutationPlan {
+    pub statements: Vec<D1PreparedStatement>,
+    pub affected_users: Vec<String>,
+    pub affected_chats: Vec<String>,
+    pub response: Value,
+    pub status: u16,
+    pub clear_cookie: bool,
+}
+
 #[derive(Deserialize)]
 struct Journal {
     id: String,
     targets: String,
+}
+
+// Downstream outages can outlast the platform's bounded alarm retries. Catch a
+// recovery failure only after persisting a new wakeup; storage failures still
+// propagate so the platform can retry them.
+async fn retry_failed_recovery(
+    outcome: ApiResult<()>,
+    rearm: impl std::future::Future<Output = ApiResult<()>>,
+) -> ApiResult<()> {
+    if outcome.is_err() {
+        rearm.await?;
+    }
+    Ok(())
 }
 
 pub async fn public(
@@ -25,6 +47,16 @@ pub async fn public(
     op: &str,
     target: &str,
 ) -> ApiResult<Response> {
+    domain(request, env, op, target, Value::Null).await
+}
+
+pub async fn domain(
+    request: &mut Request,
+    env: &Env,
+    op: &str,
+    target: &str,
+    body: Value,
+) -> ApiResult<Response> {
     let actor = auth::require_session(request, env).await?;
     let cookie = request.headers().get("Cookie")?.unwrap_or_default();
     routes::forward(
@@ -32,7 +64,7 @@ pub async fn public(
         Call {
             op: "control.write".into(),
             authority: routes::authority(&actor, NAME),
-            data: json!({"operation":op,"target":target,"cookie":cookie}),
+            data: json!({"operation":op,"target":target,"cookie":cookie,"body":body}),
         },
     )
     .await
@@ -46,7 +78,13 @@ impl ChatRealtime {
         }
         self.ensure()?;
         let _turn = self.send_lane.enter().await?;
-        self.control_recover().await
+        let outcome = self.control_recover().await;
+        retry_failed_recovery(outcome, async {
+            self.state.storage().set_alarm(30_000_i64).await?;
+            console_error!("Control recovery deferred; durable retry scheduled");
+            Ok(())
+        })
+        .await
     }
     async fn control_targets(&self, id: &str, targets: &[String], op: &str) -> ApiResult<()> {
         // Bounded fanout keeps large accounts within runtime subrequest limits.
@@ -135,6 +173,11 @@ impl ChatRealtime {
             return http::json(&lease);
         }
         if call.op != "control.write" {
+            if call.op == "control.owner" {
+                return self
+                    .execute_plan(crate::owner::prepare_control(&self.env, &call.data).await?)
+                    .await;
+            }
             return Err(ApiError::domain("NOT_FOUND", 404));
         }
         let cookie = call.data["cookie"]
@@ -154,6 +197,34 @@ impl ChatRealtime {
         let now = http::now_iso();
         let op = call.data["operation"].as_str().unwrap_or_default();
         let target = call.data["target"].as_str().unwrap_or_default();
+        if op.starts_with("admin.") {
+            return self
+                .execute_plan(
+                    crate::admin::prepare_control(
+                        &self.env,
+                        &actor,
+                        op,
+                        target,
+                        &call.data["body"],
+                    )
+                    .await?,
+                )
+                .await;
+        }
+        if op.starts_with("identity.") {
+            return self
+                .execute_plan(
+                    crate::identity::prepare_control(
+                        &self.env,
+                        &actor,
+                        op,
+                        target,
+                        &call.data["body"],
+                    )
+                    .await?,
+                )
+                .await;
+        }
         let mut statements = vec![];
         let clear_cookie = match op {
             "logout" => {
@@ -218,21 +289,48 @@ impl ChatRealtime {
             }
             _ => return Err(ApiError::domain("NOT_FOUND", 404)),
         };
-        let active = db
-            .all(
-                "SELECT DISTINCT chat_id FROM active_chat_members WHERE user_id=?1",
-                &[json!(actor.user_id)],
-            )
-            .await?;
+        self.execute_plan(MutationPlan {
+            statements,
+            affected_users: vec![actor.user_id],
+            affected_chats: vec![],
+            response: Value::Null,
+            status: 204,
+            clear_cookie,
+        })
+        .await
+    }
+
+    async fn execute_plan(&self, plan: MutationPlan) -> ApiResult<Response> {
+        let db = Db(self.env.d1("DB")?);
+        let now = http::now_iso();
+        let mut statements = plan.statements;
+        let mut active: std::collections::BTreeSet<String> =
+            plan.affected_chats.into_iter().collect();
+        for user in plan.affected_users {
+            for row in db
+                .all(
+                    "SELECT DISTINCT chat_id FROM active_chat_members WHERE user_id=?1",
+                    &[json!(user)],
+                )
+                .await?
+            {
+                if let Some(id) = row["chat_id"].as_str() {
+                    active.insert(id.into());
+                }
+            }
+        }
         let registered = self
             .store
             .sql()
             .exec("SELECT chat_id FROM registered_rooms", None)?
             .to_array::<Value>()?;
         let targets: Vec<String> = active
-            .iter()
-            .filter(|r| registered.iter().any(|v| v["chat_id"] == r["chat_id"]))
-            .filter_map(|r| r["chat_id"].as_str().map(str::to_owned))
+            .into_iter()
+            .filter(|id| {
+                registered
+                    .iter()
+                    .any(|v| v["chat_id"].as_str() == Some(id.as_str()))
+            })
             .collect();
         let id = http::random_id()?;
         // Arm before journaling: no crash after fencing can strand the room forever.
@@ -254,13 +352,58 @@ impl ChatRealtime {
         // Recovery preserves a committed marker; otherwise it aborts before releasing.
         self.control_recover().await?;
         result?;
-        let mut response = Response::empty()?.with_status(204);
-        if clear_cookie {
+        let mut response = if plan.status == 204 {
+            Response::empty()?.with_status(204)
+        } else {
+            http::json(&plan.response)?.with_status(plan.status)
+        };
+        if plan.clear_cookie {
             response.headers_mut().set(
                 "Set-Cookie",
                 "__Host-session=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0",
             )?;
         }
         Ok(response)
+    }
+}
+
+#[cfg(test)]
+mod recovery_tests {
+    use super::*;
+    use futures_util::FutureExt;
+    use std::cell::Cell;
+
+    #[test]
+    fn a_long_outage_keeps_scheduling_recovery_after_the_platform_retry_budget() {
+        let scheduled = Cell::new(0);
+        // Each iteration represents a new alarm invocation after eviction. This
+        // exceeds the platform's six automatic retries without inbound traffic.
+        for _ in 0..18 {
+            let outcome =
+                retry_failed_recovery(Err(ApiError::retryable("AUTHORITY_RETRY", 503)), async {
+                    scheduled.set(scheduled.get() + 1);
+                    Ok(())
+                })
+                .now_or_never();
+            assert!(matches!(outcome, Some(Ok(()))));
+        }
+        assert_eq!(scheduled.get(), 18);
+        let outcome = retry_failed_recovery(Ok(()), async {
+            scheduled.set(scheduled.get() + 1);
+            Ok(())
+        })
+        .now_or_never();
+        assert!(matches!(outcome, Some(Ok(()))));
+        assert_eq!(scheduled.get(), 18, "a drained journal stops waking up");
+    }
+
+    #[test]
+    fn a_failed_alarm_write_is_not_swallowed() {
+        let outcome =
+            retry_failed_recovery(Err(ApiError::retryable("AUTHORITY_RETRY", 503)), async {
+                Err(ApiError::retryable("ALARM_STORAGE_UNAVAILABLE", 503))
+            })
+            .now_or_never();
+        assert!(matches!(outcome, Some(Err(_))));
     }
 }

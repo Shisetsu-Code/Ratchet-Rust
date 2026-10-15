@@ -1,5 +1,6 @@
-mod authority;
+pub(crate) mod authority;
 pub mod control;
+pub mod metadata;
 pub mod routes;
 mod storage;
 use crate::http::{self, ApiError, ApiResult};
@@ -33,9 +34,22 @@ pub struct ChatRealtime {
     store: Store,
     initialized: Cell<bool>,
     registered: Cell<bool>,
+    projection_scheduled: Cell<bool>,
     generation: Cell<u64>,
     crypto: RefCell<Option<StorageCrypto>>,
     send_lane: ratchet_core::lane::FifoLane,
+    publication_lane: ratchet_core::lane::FifoLane,
+}
+
+// Poll the FIFO reservation before starting storage awaits. Later commits may
+// become durable concurrently, but their notifications cannot overtake this one.
+async fn enter_publication(
+    lane: &ratchet_core::lane::FifoLane,
+    durable: impl std::future::Future<Output = ApiResult<()>>,
+) -> ApiResult<ratchet_core::lane::LaneGuard> {
+    let (publication, ()) =
+        futures_util::try_join!(async { Ok::<_, ApiError>(lane.enter().await?) }, durable,)?;
+    Ok(publication)
 }
 
 impl ChatRealtime {
@@ -134,7 +148,7 @@ impl ChatRealtime {
                     .await?
                     .success
                 {
-                    return Err(ApiError::domain("CUSTOMER_MESSAGE_RATE_LIMITED", 429));
+                    return Err(ApiError::retryable("CUSTOMER_MESSAGE_RATE_LIMITED", 429));
                 }
             }
         }
@@ -145,9 +159,6 @@ impl ChatRealtime {
         let lane = self.send_lane.enter().await?;
         let lease = self.authorize(meta, false).await?;
         let generation = self.generation.get();
-        if !input.attachment_ids.is_empty() {
-            return Err(ApiError::domain("ATTACHMENT_NOT_READY", 503));
-        }
         let duplicate = self
             .store
             .lookup(&meta.device_id, &input.client_message_id)?
@@ -162,14 +173,82 @@ impl ChatRealtime {
             self.store
                 .prepare(crypto, &author, input, lease.display_name.clone())
         })?;
-        authority::assert_open(&self.store.sql())?;
-        if generation != self.generation.get() {
-            return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
+        let fingerprint = row.fingerprint.clone();
+        let db = crate::db::Db(self.env.d1("DB")?);
+        if !duplicate && !input.attachment_ids.is_empty() {
+            let auth = crate::auth::AuthContext {
+                session_id: meta.session_id.clone(),
+                user_id: meta.user_id.clone(),
+                device_id: meta.device_id.clone(),
+                role: lease.user_role.clone(),
+                device_authorized: true,
+                webauthn_verified_at: None,
+                authenticator_verified_at: None,
+            };
+            if let Err(error) = crate::files::claim_attachments(
+                &db,
+                &auth,
+                &meta.chat_id,
+                &input.client_message_id,
+                &fingerprint,
+                &input.attachment_ids,
+            )
+            .await
+            {
+                if !duplicate && matches!(&error, ApiError::Domain(_)) {
+                    crate::files::release_claims(
+                        &db,
+                        &meta.chat_id,
+                        &input.client_message_id,
+                        &meta.device_id,
+                        &fingerprint,
+                        &input.attachment_ids,
+                    )
+                    .await?;
+                }
+                return Err(error);
+            }
         }
-        let commit = self.store.commit(row, lease.can_mutate)?;
+        let committed = (|| {
+            authority::assert_open(&self.store.sql())?;
+            if generation != self.generation.get() {
+                return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
+            }
+            self.store.commit(row, lease.can_mutate)
+        })();
+        let commit = match committed {
+            Ok(commit) => commit,
+            Err(error) => {
+                if !duplicate
+                    && !input.attachment_ids.is_empty()
+                    && matches!(&error, ApiError::Domain(_))
+                {
+                    crate::files::release_claims(
+                        &db,
+                        &meta.chat_id,
+                        &input.client_message_id,
+                        &meta.device_id,
+                        &fingerprint,
+                        &input.attachment_ids,
+                    )
+                    .await?;
+                }
+                return Err(error);
+            }
+        };
         drop(lane);
-        self.store.durable().await?;
+        let _publication = enter_publication(&self.publication_lane, async {
+            self.schedule_projection().await?;
+            self.store.durable().await
+        })
+        .await?;
         if !commit.duplicate {
+            let env = self.env.clone();
+            let chat = meta.chat_id.clone();
+            let sender = meta.device_id.clone();
+            self.state.wait_until(async move {
+                let _ = crate::files::notify_push(&env, &chat, &sender).await;
+            });
             for socket in self.state.get_websockets() {
                 if let Some(peer) = socket.deserialize_attachment::<Authority>()?
                     && authority::cached(&self.store.sql(), &peer)?.is_some()
@@ -252,6 +331,61 @@ impl ChatRealtime {
             self.store.durable().await?;
             return http::json(&json!({"ok":true}));
         }
+        if call.op == "owner.read" {
+            let ns = self.env.durable_object("CHAT_REALTIME")?;
+            if self.state.id().to_string() != ns.id_from_name(&meta.chat_id)?.to_string() {
+                return Err(ApiError::domain("CHAT_NOT_AVAILABLE", 403));
+            }
+            crate::owner::require_chat(&self.env, &call.data, &meta.chat_id).await?;
+            let after = call.data["after"]
+                .as_u64()
+                .filter(|n| *n <= ratchet_core::message::MAX_SAFE_INTEGER)
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            let limit = call.data["limit"]
+                .as_u64()
+                .filter(|n| (1..=100).contains(n))
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            let data = self.with_crypto(&meta.chat_id, |crypto| {
+                self.store.sync(crypto, &meta.chat_id, after, limit as u32)
+            })?;
+            self.store.durable().await?;
+            crate::owner::require_chat(&self.env, &call.data, &meta.chat_id).await?;
+            return http::json(&data);
+        }
+        if call.op == "attachments.reconcile" {
+            let ns = self.env.durable_object("CHAT_REALTIME")?;
+            if self.state.id().to_string() != ns.id_from_name(&meta.chat_id)?.to_string() {
+                return Err(ApiError::domain("CHAT_NOT_AVAILABLE", 403));
+            }
+            let _turn = self.send_lane.enter().await?;
+            let client = call.data["client_message_id"]
+                .as_str()
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            let device = call.data["sender_device_id"]
+                .as_str()
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            let fingerprint = call.data["fingerprint"]
+                .as_str()
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            let id = call.data["file_id"]
+                .as_str()
+                .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
+            if self.store.lookup(device, client)?.is_none() {
+                crate::files::release_claims(
+                    &crate::db::Db(self.env.d1("DB")?),
+                    &meta.chat_id,
+                    client,
+                    device,
+                    fingerprint,
+                    &[id.into()],
+                )
+                .await?;
+            } else {
+                self.store.durable().await?;
+                crate::db::Db(self.env.d1("DB")?).run("DELETE FROM chat_storage_attachment_claims WHERE file_id=?1 AND chat_id=?2 AND client_message_id=?3 AND sender_device_id=?4 AND fingerprint=?5",&[json!(id),json!(meta.chat_id),json!(client),json!(device),json!(fingerprint)]).await?;
+            }
+            return http::json(&json!({"ok":true}));
+        }
         let lease = self.authorize(meta, call.op != "send").await?;
         match call.op.as_str() {
             "open" => {
@@ -328,7 +462,11 @@ impl ChatRealtime {
                 let receipts =
                     self.store
                         .receipts(meta.user_id.clone(), entries.clone(), id.into())?;
-                self.store.durable().await?;
+                let _publication = enter_publication(&self.publication_lane, async {
+                    self.schedule_projection().await?;
+                    self.store.durable().await
+                })
+                .await?;
                 for row in receipts.iter().filter(|r| r["duplicate"] == false) {
                     let event = json!({"type":"receipt.committed","chat_id":meta.chat_id,"revision":row["revision"],"message_id":row["message_id"],"user_id":meta.user_id,"state":row["state"]});
                     for socket in self.state.get_websockets() {
@@ -355,9 +493,11 @@ impl DurableObject for ChatRealtime {
             store,
             initialized: Cell::new(false),
             registered: Cell::new(false),
+            projection_scheduled: Cell::new(false),
             generation: Cell::new(0),
             crypto: RefCell::new(None),
             send_lane: ratchet_core::lane::FifoLane::new(),
+            publication_lane: ratchet_core::lane::FifoLane::new(),
         }
     }
     async fn fetch(&self, request: Request) -> Result<Response> {
@@ -367,7 +507,7 @@ impl DurableObject for ChatRealtime {
         }
     }
     async fn alarm(&self) -> Result<Response> {
-        self.recover_control_alarm()
+        self.project_stats()
             .await
             .map_err(|_| Error::RustError("Authority recovery must retry".into()))?;
         Response::empty()
@@ -434,5 +574,142 @@ impl DurableObject for ChatRealtime {
     }
     async fn websocket_error(&self, socket: WebSocket, _error: Error) -> Result<()> {
         socket.close(Some(1011), Some("Socket error"))
+    }
+}
+
+#[cfg(test)]
+mod publication_tests {
+    use super::*;
+    use futures_util::FutureExt;
+    use std::future::poll_fn;
+    use std::task::Poll;
+
+    #[test]
+    fn slow_first_durability_preserves_message_and_receipt_publication_order() {
+        let lane = ratchet_core::lane::FifoLane::new();
+        let first_durable = Cell::new(false);
+        let later_durability_polled = Cell::new(0);
+        let committed = RefCell::new(Vec::new());
+        let published = RefCell::new(Vec::new());
+        let mut first = Box::pin(async {
+            committed.borrow_mut().push(1);
+            let _publication = enter_publication(
+                &lane,
+                poll_fn(|_| {
+                    if first_durable.get() {
+                        Poll::Ready(Ok(()))
+                    } else {
+                        Poll::Pending
+                    }
+                }),
+            )
+            .await?;
+            published.borrow_mut().push(1);
+            Ok::<_, ApiError>(())
+        });
+        assert!(first.as_mut().now_or_never().is_none());
+        let mut second_message = Box::pin(async {
+            committed.borrow_mut().push(2);
+            let _publication = enter_publication(&lane, async {
+                later_durability_polled.set(later_durability_polled.get() + 1);
+                Ok(())
+            })
+            .await?;
+            published.borrow_mut().push(2);
+            Ok::<_, ApiError>(())
+        });
+        let mut receipt = Box::pin(async {
+            committed.borrow_mut().push(3);
+            let _publication = enter_publication(&lane, async {
+                later_durability_polled.set(later_durability_polled.get() + 1);
+                Ok(())
+            })
+            .await?;
+            published.borrow_mut().push(3);
+            Ok::<_, ApiError>(())
+        });
+        assert!(second_message.as_mut().now_or_never().is_none());
+        assert!(receipt.as_mut().now_or_never().is_none());
+        assert_eq!(*committed.borrow(), vec![1, 2, 3]);
+        assert_eq!(
+            later_durability_polled.get(),
+            2,
+            "later durability is not serialized behind publication"
+        );
+        assert!(published.borrow().is_empty());
+        first_durable.set(true);
+        assert!(matches!(first.as_mut().now_or_never(), Some(Ok(()))));
+        assert!(matches!(
+            second_message.as_mut().now_or_never(),
+            Some(Ok(()))
+        ));
+        assert!(matches!(receipt.as_mut().now_or_never(), Some(Ok(()))));
+        assert_eq!(*published.borrow(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn failed_durability_releases_publication_for_following_commits() {
+        let lane = ratchet_core::lane::FifoLane::new();
+        let first_failed = Cell::new(false);
+        let mut first = Box::pin(enter_publication(
+            &lane,
+            poll_fn(|_| {
+                if first_failed.get() {
+                    Poll::Ready(Err(ApiError::retryable("PERSIST_FAILED", 503)))
+                } else {
+                    Poll::Pending
+                }
+            }),
+        ));
+        assert!(first.as_mut().now_or_never().is_none());
+        let mut next = Box::pin(enter_publication(&lane, async { Ok(()) }));
+        assert!(next.as_mut().now_or_never().is_none());
+        first_failed.set(true);
+        assert!(matches!(first.as_mut().now_or_never(), Some(Err(_))));
+        assert!(matches!(next.as_mut().now_or_never(), Some(Ok(_))));
+    }
+
+    #[test]
+    fn publication_fifo_drains_twenty_sequential_writers_through_one_thousand_commits() {
+        let lane = ratchet_core::lane::FifoLane::new();
+        let committed = Cell::new(0);
+        let published = RefCell::new(Vec::new());
+        let writers = (0..20).map(|_| async {
+            for _ in 0..50 {
+                committed.set(committed.get() + 1);
+                let revision = committed.get();
+                let mut yielded = false;
+                let _publication = enter_publication(
+                    &lane,
+                    poll_fn(|cx| {
+                        if yielded {
+                            Poll::Ready(Ok(()))
+                        } else {
+                            yielded = true;
+                            cx.waker().wake_by_ref();
+                            Poll::Pending
+                        }
+                    }),
+                )
+                .await?;
+                published.borrow_mut().push(revision);
+            }
+            Ok::<_, ApiError>(())
+        });
+        let mut all = Box::pin(futures_util::future::join_all(writers));
+        let mut completed = false;
+        for _ in 0..2000 {
+            if let Some(results) = all.as_mut().now_or_never() {
+                assert!(results.iter().all(Result::is_ok));
+                completed = true;
+                break;
+            }
+        }
+        assert!(
+            completed,
+            "bounded native polling drains the publication queue"
+        );
+        assert_eq!(committed.get(), 1000);
+        assert_eq!(*published.borrow(), (1..=1000).collect::<Vec<_>>());
     }
 }

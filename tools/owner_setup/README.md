@@ -2,7 +2,8 @@
 
 Interfaz de owner/administración conservada durante la migración. Su integración
 completa con el servidor Rust sigue pendiente: todavía no usar para operar un
-despliegue real. El origen predeterminado es `http://localhost:8787`.
+despliegue real. El origen predeterminado es `http://localhost:8797`; puede
+cambiarse con `RATCHET_RUST_ORIGIN`.
 
 La consola Rust no carga tokens, contraseñas ni llaves del staging SQLite o de
 Ratchet Beta. El token de instalación se ingresa manualmente o mediante la

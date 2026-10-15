@@ -1,4 +1,5 @@
 /target/
+/crypto-wasm/target/
 /node_modules/
 /dist/
 /build/
@@ -10,7 +11,10 @@
 .env*
 private.json
 *.key
+*.ratchet-key
 *.pem
 __pycache__/
 test-results/
 playwright-report/
+tests/browser/results/
+*.log

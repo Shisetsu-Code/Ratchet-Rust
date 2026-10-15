@@ -1,0 +1,215 @@
+{
+  "date": "2026-10-15",
+  "runtime": "Rust 1.99.0 / workers-rs 0.8.7",
+  "native_workspace_tests": 35,
+  "client_crypto_tests": 3,
+  "tooling_tests": 5,
+  "integrated_contracts": {
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 80136.0692
+  },
+  "npm_audit_vulnerabilities": 0,
+  "worker_wasm_sha256": "ec71db36ddc8e8a306a7fff591e46d8801ea5a1e30737690663dda5ac0ede327",
+  "local_load": [
+    {
+      "scenario": "burst20",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 187.38,
+      "ack": {
+        "count": 20,
+        "mean_ms": 91.88,
+        "p50_ms": 88.36,
+        "p95_ms": 156.97,
+        "p99_ms": 164.25,
+        "max_ms": 164.25
+      },
+      "recipient_arrival": {
+        "count": 20,
+        "mean_ms": 91.45,
+        "p50_ms": 88,
+        "p95_ms": 156.69,
+        "p99_ms": 163.82,
+        "max_ms": 163.82
+      },
+      "recipient_presentation": {
+        "count": 20,
+        "mean_ms": 91.47,
+        "p50_ms": 88.02,
+        "p95_ms": 156.7,
+        "p99_ms": 163.83,
+        "max_ms": 163.83
+      }
+    },
+    {
+      "scenario": "burst30",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 246.64,
+      "ack": {
+        "count": 30,
+        "mean_ms": 142.01,
+        "p50_ms": 139.22,
+        "p95_ms": 235.98,
+        "p99_ms": 242.79,
+        "max_ms": 242.79
+      },
+      "recipient_arrival": {
+        "count": 30,
+        "mean_ms": 141.56,
+        "p50_ms": 138.82,
+        "p95_ms": 235.22,
+        "p99_ms": 242.28,
+        "max_ms": 242.28
+      },
+      "recipient_presentation": {
+        "count": 30,
+        "mean_ms": 141.57,
+        "p50_ms": 138.83,
+        "p95_ms": 235.23,
+        "p99_ms": 242.3,
+        "max_ms": 242.3
+      }
+    },
+    {
+      "scenario": "three-accounts-30-each",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 752.69,
+      "ack": {
+        "count": 90,
+        "mean_ms": 387.65,
+        "p50_ms": 396.5,
+        "p95_ms": 700.05,
+        "p99_ms": 728.18,
+        "max_ms": 728.18
+      },
+      "recipient_arrival": {
+        "count": 90,
+        "mean_ms": 387.12,
+        "p50_ms": 395.98,
+        "p95_ms": 699.57,
+        "p99_ms": 727.93,
+        "max_ms": 727.93
+      },
+      "recipient_presentation": {
+        "count": 90,
+        "mean_ms": 387.13,
+        "p50_ms": 395.98,
+        "p95_ms": 699.58,
+        "p99_ms": 727.94,
+        "max_ms": 727.94
+      }
+    },
+    {
+      "scenario": "1000-messages-20-accounts",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 14490.59,
+      "ack": {
+        "count": 1000,
+        "mean_ms": 7689.73,
+        "p50_ms": 7848.39,
+        "p95_ms": 13805.32,
+        "p99_ms": 14328.18,
+        "max_ms": 14457.96
+      },
+      "recipient_arrival": {
+        "count": 1000,
+        "mean_ms": 7688.85,
+        "p50_ms": 7847.69,
+        "p95_ms": 13804.56,
+        "p99_ms": 14327.48,
+        "max_ms": 14457.26
+      },
+      "recipient_presentation": {
+        "count": 1000,
+        "mean_ms": 7688.87,
+        "p50_ms": 7847.7,
+        "p95_ms": 13804.57,
+        "p99_ms": 14327.5,
+        "max_ms": 14457.27
+      }
+    },
+    {
+      "scenario": "sustained-10-per-second",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 13073.47,
+      "ack": {
+        "count": 120,
+        "mean_ms": 36.78,
+        "p50_ms": 9.53,
+        "p95_ms": 186.41,
+        "p99_ms": 306.01,
+        "max_ms": 321.35
+      },
+      "recipient_arrival": {
+        "count": 120,
+        "mean_ms": 36.41,
+        "p50_ms": 9.21,
+        "p95_ms": 185.88,
+        "p99_ms": 305.51,
+        "max_ms": 321.12
+      },
+      "recipient_presentation": {
+        "count": 120,
+        "mean_ms": 36.43,
+        "p50_ms": 9.22,
+        "p95_ms": 185.89,
+        "p99_ms": 305.53,
+        "max_ms": 321.14
+      }
+    },
+    {
+      "scenario": "administrator-user-quota-accepted",
+      "transport": "ws",
+      "recipient": "Node network decode/presentation; no browser DOM",
+      "elapsed_ms": 1467.12,
+      "ack": {
+        "count": 100,
+        "mean_ms": 788.69,
+        "p50_ms": 722.54,
+        "p95_ms": 1424.53,
+        "p99_ms": 1440.49,
+        "max_ms": 1444.3
+      },
+      "recipient_arrival": {
+        "count": 100,
+        "mean_ms": 788.12,
+        "p50_ms": 722.11,
+        "p95_ms": 1424.07,
+        "p99_ms": 1440.03,
+        "max_ms": 1443.86
+      },
+      "recipient_presentation": {
+        "count": 100,
+        "mean_ms": 788.13,
+        "p50_ms": 722.12,
+        "p95_ms": 1424.08,
+        "p99_ms": 1440.03,
+        "max_ms": 1443.87
+      }
+    }
+  ],
+  "staging": {
+    "url": "https://ratchet-rust-staging-20261015.braian-n-l.workers.dev",
+    "version_id": "0e3e6029-5158-4ea2-a031-6950b74038ce",
+    "transport": {
+      "messages": 30,
+      "total_ms": 487,
+      "recipient_mean_ms": 334,
+      "recipient_p95_ms": 341,
+      "measurement": "Node WSS arrival; includes network; no browser render"
+    },
+    "browser_flow_passed": true,
+    "encrypted_key_native_console_passed": true
+  },
+  "limitations": [
+    "Physical phone OS notification delivery not exercised",
+    "One earlier local 1000-message run stalled at 100; subsequent isolated and integrated runs passed; root cause not isolated",
+    "No real provider outage or forced remote Durable Object eviction campaign"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema":"./node_modules/wrangler/config-schema.json",
+  "name":"ratchet-rust-staging-20261015",
+  "account_id":"3904fa9871c00ad145ed8f8f5404d1bd",
+  "main":"./crates/worker/build/index.js",
+  "compatibility_date":"2026-10-15",
+  "workers_dev":true,
+  "assets":{"directory":"./dist/client","binding":"ASSETS","not_found_handling":"single-page-application","run_worker_first":true},
+  "r2_buckets":[{"binding":"ATTACHMENTS","bucket_name":"ratchet-rust-staging-20261015-files"}],
+  "d1_databases":[{"binding":"DB","database_name":"ratchet-rust-staging-20261015","database_id":"d023e03e-91d7-4cbe-9056-53f711bfc615","migrations_dir":"db/migrations"}],
+  "durable_objects":{"bindings":[{"name":"CHAT_REALTIME","class_name":"ChatRealtime"}]},
+  "migrations":[{"tag":"v1","new_sqlite_classes":["ChatRealtime"]}],
+  "vars":{"APP_VERSION":"0.1.0-rust-staging","RP_ORIGIN":"https://ratchet-rust-staging-20261015.braian-n-l.workers.dev","RP_ID":"ratchet-rust-staging-20261015.braian-n-l.workers.dev"},
+  "observability":{"enabled":true,"head_sampling_rate":0.1},
+  "triggers":{"crons":["*/5 * * * *"]},
+  "ratelimits":[
+    {"name":"PUBLIC_RATE_LIMITER","namespace_id":"31015031","simple":{"limit":300,"period":60}},
+    {"name":"AUTH_RATE_LIMITER","namespace_id":"31015032","simple":{"limit":60,"period":60}},
+    {"name":"API_RATE_LIMITER","namespace_id":"31015033","simple":{"limit":1200,"period":60}},
+    {"name":"WS_RATE_LIMITER","namespace_id":"31015034","simple":{"limit":60,"period":60}},
+    {"name":"MESSAGE_RATE_LIMITER","namespace_id":"31015035","simple":{"limit":1200,"period":60}},
+    {"name":"CUSTOMER_MESSAGE_BURST_RATE_LIMITER","namespace_id":"31015036","simple":{"limit":100,"period":10}},
+    {"name":"CUSTOMER_MESSAGE_SUSTAINED_RATE_LIMITER","namespace_id":"31015037","simple":{"limit":600,"period":60}}
+  ]
+}
