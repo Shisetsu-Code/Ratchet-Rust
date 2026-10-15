@@ -1,6 +1,6 @@
 # Validación de Ratchet Rust
 
-Cierre de implementación y pruebas del 2026-10-15. Las 74 rutas activas están implementadas en Rust y comprobadas localmente; staging independiente desplegado y recorrido funcional remoto aprobado. La publicación del commit se registra por separado cuando ocurra.
+Cierre de implementación y pruebas del 2026-10-15. Las 74 rutas activas están implementadas en Rust y comprobadas localmente; staging independiente desplegado y recorrido funcional remoto aprobado. Implementación publicada y verificada en GitHub: `72a40707384a09bd82421ba3484c0a03fe9f1c90`.
 
 ## Rutas y contratos
 
@@ -88,7 +88,7 @@ npm run test:staging
 - [x] Staging nuevo y recorrido funcional remoto, transporte y consola nativa.
 - [x] Documentación del modelo real de cifrado y del alcance de medición.
 - [x] Repetición 31/31 sobre el artefacto final sin trazas; resultados públicos en validation-results.json.
-- [x] Cierre preparado para publicación en main de Shisetsu-Code/Ratchet-Rust.
+- [x] Cierre publicado y verificado en main de Shisetsu-Code/Ratchet-Rust.
 
 Como ampliaciones operativas opcionales quedan pruebas sobre teléfonos físicos, entrega Web Push externa y campañas adicionales de evicción/alarma/fallos de almacenamiento. No son rutas pendientes de portado ni se usan para aplazar indefinidamente la migración terminada.
 

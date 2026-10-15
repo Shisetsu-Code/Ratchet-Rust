@@ -91,3 +91,5 @@ La entrega física de push y campañas adicionales de fallos de infraestructura 
 - Generador sostenido corregido para no recuperar retrasos como ráfagas; cuotas temporales CUSTOMER reintentables. Ráfagas, 1.000 mensajes y recuperación volvieron a pasar. Se conserva la incidencia no reproducida sin atribuir causa.
 - Worker remoto 0e3e6029-5158-4ea2-a031-6950b74038ce: health Rust migration_ready=true; navegador completo y última ráfaga30 ordenada, sync, revocación4001 y consola cifrada aprobados.
 - Resultado reproducible/limitaciones en docs/validation-results.json. Publicación de este cierre en main del repositorio dedicado; no hay cambios en el despliegue de referencia.
+
+- Publicación comprobada: commit de implementación 72a40707384a09bd82421ba3484c0a03fe9f1c90 en origin/main; cierre documental posterior sin cambios de runtime.

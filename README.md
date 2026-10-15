@@ -53,6 +53,6 @@ npm run test:staging
 - [Plan](docs/superpowers/plans/2026-10-15-ratchet-rust.md)
 - [Historial de decisiones](docs/MIGRATION_PROGRESS.md)
 
-La publicación del commit y del código remoto se registra cuando se complete; este documento no afirma un push todavía.
+Código y resultados publicados en `main` de `Shisetsu-Code/Ratchet-Rust`: commit de implementación `72a4070`. El staging utiliza el artefacto probado; los datos de aceptación están en `docs/validation-results.json`.
 
 Cierre final: 35 pruebas Rust + 3 criptográficas + 5 de herramientas + 31 contratos integrados aprobados. Staging verificado y matriz completa; métricas y SHA-256 del artefacto en [validation-results.json](docs/validation-results.json).

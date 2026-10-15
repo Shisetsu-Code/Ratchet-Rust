@@ -125,8 +125,8 @@
 - [x] Staging nuevo desplegado y probado: `https://ratchet-rust-staging-20261015.braian-n-l.workers.dev`, D1/R2/DO aislados. Ráfaga remota de 30: 453 ms total, media 403 ms/p95 436 ms de llegada Node, orden 1..30, sync exacto, reconnect, logout 4001 y otro cliente conectado. Consola Python con llave cifrada aprobada; pushconfig enabled=true.
 - [x] Documentado el modelo real: mensajes legibles por servidor sobre HTTPS/WSS, AES-GCM en reposo y caché/outbox local cifrados; no se afirma E2EE de mensajes. Adjuntos/fondos cifrados en cliente.
 - [x] Scripts `npm run verify`, `deploy:staging` y `test:staging` documentados; no instalan herramientas.
-- [ ] Registrar las repeticiones finales tras retirar trazas temporales de diagnóstico; la ejecución 31/31 corresponde al artefacto probado antes de esa retirada.
-- [ ] Publicar commit/código/resultados en el repositorio remoto; no se afirma un push antes de realizarlo.
+- [x] Regresión final 31/31 después de retirar trazas temporales; escenario de 1.000 repetido con recuperación exacta.
+- [x] Implementación y resultados publicados y verificados en GitHub: 72a4070.
 
 Una ejecución anterior de 1.000 se detuvo en 100 sin causa aislada; el caso focalizado y la regresión completa posterior pasaron. Se conserva como reserva concreta y no se atribuye una causa sin evidencia. Pruebas adicionales sobre dispositivos físicos, entrega externa Web Push y campañas de pérdida de ACK/evicción/alarma son ampliaciones operativas; no rutas sin implementar ni gates nuevos de migración. Los pasos de confirmar en Git quedan abiertos sólo hasta publicación.
 
