@@ -1,0 +1,154 @@
+{
+  "base": "https://ratchet-rust-staging-20261015.braian-n-l.workers.dev",
+  "verified": {
+    "ordered_delivery": true,
+    "exact_http_recovery": true,
+    "reconnect": true,
+    "logout_revocation": true,
+    "owner_console": true
+  },
+  "observations": [
+    {
+      "profile": "burst",
+      "messages": 30,
+      "total_ms": 481.83649999999943,
+      "recipient": {
+        "min_ms": 369.3288999999995,
+        "mean_ms": 422.7505766666667,
+        "p50_ms": 416.84850000000006,
+        "p95_ms": 438.78619999999955,
+        "max_ms": 438.8778000000002
+      },
+      "ack": {
+        "min_ms": 374.39570000000003,
+        "mean_ms": 448.32497666666666,
+        "p50_ms": 444.6417000000001,
+        "p95_ms": 460.0032000000001,
+        "max_ms": 460.1145000000006
+      },
+      "samples": [
+        {
+          "revision": 1,
+          "arrival_ms": 369.3288999999995
+        },
+        {
+          "revision": 2,
+          "arrival_ms": 404.84569999999985
+        },
+        {
+          "revision": 3,
+          "arrival_ms": 410.08390000000054
+        },
+        {
+          "revision": 4,
+          "arrival_ms": 410.1975999999995
+        },
+        {
+          "revision": 5,
+          "arrival_ms": 410.29429999999957
+        },
+        {
+          "revision": 6,
+          "arrival_ms": 410.3609999999999
+        },
+        {
+          "revision": 7,
+          "arrival_ms": 410.4966000000004
+        },
+        {
+          "revision": 8,
+          "arrival_ms": 410.6221999999998
+        },
+        {
+          "revision": 9,
+          "arrival_ms": 416.0621000000001
+        },
+        {
+          "revision": 10,
+          "arrival_ms": 416.2420000000002
+        },
+        {
+          "revision": 11,
+          "arrival_ms": 416.33370000000014
+        },
+        {
+          "revision": 12,
+          "arrival_ms": 416.46690000000035
+        },
+        {
+          "revision": 13,
+          "arrival_ms": 416.58679999999913
+        },
+        {
+          "revision": 14,
+          "arrival_ms": 416.7478000000001
+        },
+        {
+          "revision": 15,
+          "arrival_ms": 416.84850000000006
+        },
+        {
+          "revision": 16,
+          "arrival_ms": 416.9314000000004
+        },
+        {
+          "revision": 17,
+          "arrival_ms": 417.02260000000024
+        },
+        {
+          "revision": 18,
+          "arrival_ms": 437.58000000000084
+        },
+        {
+          "revision": 19,
+          "arrival_ms": 437.7402000000002
+        },
+        {
+          "revision": 20,
+          "arrival_ms": 437.83570000000054
+        },
+        {
+          "revision": 21,
+          "arrival_ms": 437.91269999999986
+        },
+        {
+          "revision": 22,
+          "arrival_ms": 437.9926000000005
+        },
+        {
+          "revision": 23,
+          "arrival_ms": 438.10199999999986
+        },
+        {
+          "revision": 24,
+          "arrival_ms": 438.1962000000003
+        },
+        {
+          "revision": 25,
+          "arrival_ms": 438.35229999999956
+        },
+        {
+          "revision": 26,
+          "arrival_ms": 438.4389000000001
+        },
+        {
+          "revision": 27,
+          "arrival_ms": 438.52809999999954
+        },
+        {
+          "revision": 28,
+          "arrival_ms": 438.70260000000053
+        },
+        {
+          "revision": 29,
+          "arrival_ms": 438.78619999999955
+        },
+        {
+          "revision": 30,
+          "arrival_ms": 438.8778000000002
+        }
+      ],
+      "measurement": "Node WSS arrival and durable ACK on one monotonic clock; includes network; excludes browser render"
+    }
+  ]
+}

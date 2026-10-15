@@ -55,6 +55,23 @@ test('real desktop and mobile browsers deliver messages with encrypted storage, 
  const adminContext=await browser.newContext({viewport:{width:1365,height:900},serviceWorkers:'block',acceptDownloads:true});
  const customerContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block',acceptDownloads:true});
  const admin=await adminContext.newPage(),customer=await customerContext.newPage();
+ let rejectNextWss=false,rejectNextHttp=0;
+ const retriedIds=[];
+ if(process.env.RATCHET_RETRY_PROBE==='1'){
+  await customer.routeWebSocket(/\/api\/v1\/chats\/[^/]+\/realtime(?:\?|$)/,ws=>{
+   const server=ws.connectToServer();
+   ws.onMessage(raw=>{
+    const event=JSON.parse(raw.toString());
+    if(event.type==='message.send'&&rejectNextWss){rejectNextWss=false;retriedIds.push(event.request.client_message_id);ws.send(JSON.stringify({type:'message.nack',chat_id:new URL(ws.url()).pathname.split('/').at(-2),client_message_id:event.request.client_message_id,error_type:'CUSTOMER_MESSAGE_RATE_LIMITED',retryable:true}));return;}
+    if(event.type==='message.send'&&retriedIds.includes(event.request.client_message_id))retriedIds.push(event.request.client_message_id);
+    server.send(raw);
+   });
+  });
+  await customer.route(/\/api\/v1\/chats\/[^/]+\/messages$/,async route=>{
+   if(!rejectNextHttp)return route.continue();rejectNextHttp--;
+   await route.fulfill({status:429,headers:{'Content-Type':'application/problem+json','x-ratchet-test-injected':'true'},body:JSON.stringify({type:'CUSTOMER_MESSAGE_RATE_LIMITED',title:'Synthetic transient limit',status:429,retryable:true})});
+  });
+ }
  const navigationTrace=[];
  await customer.exposeBinding('__ratchetNavigationTrace',(_source,event)=>{navigationTrace.push(event);if(navigationTrace.length>180)navigationTrace.shift();});
  await customer.addInitScript(()=>{
@@ -74,7 +91,7 @@ test('real desktop and mobile browsers deliver messages with encrypted storage, 
  const failures=[];
  for(const [name,page] of [['admin',admin],['customer',customer]]){
   page.on('pageerror',error=>failures.push(name+': '+error.message));
-  page.on('response',r=>{if(r.status()>=400&&r.url().includes('/api/'))failures.push(name+' HTTP '+r.status()+' '+new URL(r.url()).pathname);});
+  page.on('response',r=>{if(r.status()>=400&&r.url().includes('/api/')&&r.headers()['x-ratchet-test-injected']!=='true')failures.push(name+' HTTP '+r.status()+' '+new URL(r.url()).pathname);});
  }
  try{
   await login(admin,credentials);await expect(admin.getByText('No hay conversaciones todavía.')).toBeVisible({timeout:30000});
@@ -89,6 +106,34 @@ test('real desktop and mobile browsers deliver messages with encrypted storage, 
   const account=admin.getByRole('dialog',{name:'Crear cuenta para el invitado'});await account.getByLabel('Nombre o apodo del cliente').fill('Browser customer');
   await account.getByRole('button',{name:'Crear cuenta y conservar chat'}).click();await expect(account).toHaveCount(0,{timeout:30000});
   t.diagnostic('Actual desktop login, UI invitation, guest registration, account conversion, and authenticated bidirectional delivery passed.');
+  const visibleLatency=[];
+  for(let index=0;index<10;index++){
+   const [sender,receiver,direction]=index%2?[admin,customer,'desktop-to-mobile']:[customer,admin,'mobile-to-desktop'];
+   const text='Visible latency sample '+index;
+   await sender.getByPlaceholder('Mensaje',{exact:true}).fill(text);
+   await receiver.evaluate(text=>{
+    window.__ratchetVisibleProbe=new Promise((resolve,reject)=>{
+     const timer=setTimeout(()=>{observer.disconnect();reject(Error('Visible probe timeout'));},60000);
+     const observer=new MutationObserver(()=>{
+      if(![...document.querySelectorAll('.bubble > p')].some(el=>el.textContent===text&&el.getClientRects().length))return;
+      observer.disconnect();clearTimeout(timer);requestAnimationFrame(()=>requestAnimationFrame(resolve));
+     });
+     observer.observe(document.body,{childList:true,subtree:true,characterData:true});
+    });
+   },text);
+   const start=performance.now();await sender.getByRole('button',{name:'Enviar',exact:true}).click();await receiver.evaluate(()=>window.__ratchetVisibleProbe);
+   visibleLatency.push({direction,click_to_visible_ms:performance.now()-start});
+  }
+  await writeFile(resolve(output,'visible-latency-'+Date.now()+'.json'),JSON.stringify({base,samples:visibleLatency,caveat:'One Node monotonic clock; event-driven DOM observer plus two animation frames. Includes Playwright click dispatch and response overhead, preparation, network, server and rendering; not a pure network or paint metric.'},null,2));
+  t.diagnostic('Browser click-to-visible samples ms '+JSON.stringify(visibleLatency));
+  if(process.env.RATCHET_RETRY_PROBE==='1'){
+   rejectNextWss=true;rejectNextHttp=6;
+   await send(customer,'Automatic recovery after transient rejection');
+   await expect(admin.locator('.bubble > p').filter({hasText:'Automatic recovery after transient rejection'})).toHaveCount(1,{timeout:15000});
+   assert.equal(rejectNextWss,false);assert.equal(rejectNextHttp,0);assert.ok(retriedIds.length>=2);assert.equal(new Set(retriedIds).size,1);
+   await expect(customer.locator('.bubble.own footer').filter({hasText:/pendiente|enviando|no enviado/})).toHaveCount(0,{timeout:15000});
+   t.diagnostic('Injected WSS NACK + six HTTP 429 responses exhausted immediate retries, then recovered automatically on the same open connection and client_message_id, without reload or duplicate display.');
+  }
 
   // Mobile options must hide staff capabilities while retaining account actions.
   await customer.locator('.options-menu-button').tap();const mobileOptions=customer.getByRole('dialog',{name:'Opciones de Ratchet'});

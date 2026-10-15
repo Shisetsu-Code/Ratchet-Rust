@@ -51,6 +51,7 @@ import {
 } from '../chat/secure-send';
 import { committedDisplayCacheKey, loadChatFromEncryptedCache, synchronizeChat, type DisplayMessage } from '../chat/sync';
 import { deliverPreparedMessageWsFirst, resumePendingOutboxWsFirst } from '../chat/ws-first-send';
+import { createRecoveryPump } from '../chat/recovery-pump';
 import { BrowserSecureMessagingEngine } from '../crypto/engine';
 import { enablePushNotifications } from '../push/subscription';
 import { openLocalDatabase } from '../storage/db';
@@ -137,6 +138,7 @@ export function SecureApp() {
   const revisionRefs = useRef(new Map<string, number>());
   const selectedChatRef = useRef<string | null>(null);
   const sendQueueRef = useRef<QueuedMessage[]>([]);
+  const recoveryPumpRef = useRef<ReturnType<typeof createRecoveryPump> | null>(null);
   const sendingRef = useRef(false);
   const deliveriesRef = useRef(new Set<Promise<void>>());
   const sendQueuePausedRef = useRef(false);
@@ -463,6 +465,8 @@ export function SecureApp() {
 
     if (result.status === 'COMMITTED') {
       for (const attachment of attachments) localAttachmentFilesRef.current.delete(attachment.file_id);
+    } else if (result.chat_id === selectedChatRef.current && ['PENDING', 'VERIFY_ACCEPTANCE', 'NEEDS_REENCRYPT'].includes(result.status)) {
+      recoveryPumpRef.current?.request();
     }
   }, []);
 
@@ -505,6 +509,19 @@ export function SecureApp() {
       applySendCompletion(result.client_message_id, result);
     });
   }, [db, session, deliverPrepared, applySendCompletion]);
+
+  useEffect(() => {
+    if (appState !== 'READY' || !selectedChat || !db || !session) return;
+    const chatId = selectedChat;
+    const pump = createRecoveryPump(async () => {
+      if (!navigator.onLine) return false;
+      await recoverChatOutbox(chatId);
+      const records = await db.getAllFromIndex('pending_outbox', 'by-chat', chatId);
+      return records.some(record => ['PENDING', 'VERIFY_ACCEPTANCE', 'NEEDS_REENCRYPT'].includes(record.status));
+    }, cause => setError(describeError(cause)));
+    recoveryPumpRef.current = pump;
+    return () => { pump.stop(); if (recoveryPumpRef.current === pump) recoveryPumpRef.current = null; };
+  }, [appState, selectedChat, db, session, recoverChatOutbox]);
 
   useEffect(() => {
     realtimeRef.current?.stop();

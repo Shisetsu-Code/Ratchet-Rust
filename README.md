@@ -1,5 +1,7 @@
 # Ratchet Rust
 
+Staging vigente: `6d3e6254-0f47-43ef-acac-57c38b4b02c4`. Medición real de Cloudflare y recuperación automática de mensajes tras agotar reintentos: [resultados y límites de la prueba](docs/REMOTE_PERFORMANCE_2026-10-15.md). Esta sección es posterior a los despliegues históricos descritos más abajo.
+
 Ensayo posterior de cuotas paralelas: **sin ganancia consistente; se conserva el runtime actual**. Se recuperaron 34.000 mensajes y pasaron 35 contratos. El candidato queda como parche reproducible, sin desplegar. [Resultados y decisión](docs/QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md).
 
 Desglose medido por etapas: con 32 mensajes en vuelo, las esperas de cuotas dominan el handler; con un solo envío, el ACK de las muestras baja de 186,5 a 11,4 ms. Se midieron 13.000 mensajes sin pérdidas; el diagnóstico es local, muestreado y desactivado por defecto. [Datos, desglose y límites](docs/LATENCY_BREAKDOWN_2026-10-15.md). No se cambió ni desplegó una optimización adicional.

@@ -49,7 +49,7 @@ if(!state.admin.provisioned){
  state.admin.provisioned=true;await writeFile(statePath,JSON.stringify(state,null,2),{mode:0o600});console.log('Remote signed administrator provisioning: PASS');
 }
 console.log('Running real desktop/mobile browser flow against isolated Rust Cloudflare staging.');
-const child=spawn(process.execPath,['--test','tests/contracts/browser.mjs'],{stdio:'inherit',windowsHide:true,env:{...process.env,RATCHET_TEST_BASE:base,RATCHET_BROWSER_LOGIN:state.admin.login,RATCHET_BROWSER_PASSWORD:state.admin.password}});
+const child=spawn(process.execPath,['--test','tests/contracts/browser.mjs'],{stdio:'inherit',windowsHide:true,env:{...process.env,RATCHET_RETRY_PROBE:process.env.RATCHET_RETRY_PROBE??'1',RATCHET_TEST_BASE:base,RATCHET_BROWSER_LOGIN:state.admin.login,RATCHET_BROWSER_PASSWORD:state.admin.password}});
 const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});assert.equal(code,0,'Remote browser flow');
 const transport=spawn(process.execPath,['scripts/staging-transport.mjs'],{stdio:'inherit',windowsHide:true,env:process.env});
 const transportCode=await new Promise((resolve,reject)=>{transport.once('error',reject);transport.once('exit',resolve);});assert.equal(transportCode,0,'Remote transport flow');

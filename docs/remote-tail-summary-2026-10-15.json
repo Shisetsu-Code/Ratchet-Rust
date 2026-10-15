@@ -1,0 +1,378 @@
+{
+  "events_count": 1379,
+  "groups": [
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        200,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 536,
+        "mean": 41.42164179104478,
+        "max": 969
+      },
+      "wall_ms": {
+        "count": 536,
+        "mean": 626.9104477611941,
+        "max": 8037
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        200,
+        "canceled"
+      ],
+      "cpu_ms": {
+        "count": 3,
+        "mean": 1.3333333333333333,
+        "max": 2
+      },
+      "wall_ms": {
+        "count": 3,
+        "mean": 410.6666666666667,
+        "max": 489
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        206,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 24,
+        "mean": 6.583333333333333,
+        "max": 24
+      },
+      "wall_ms": {
+        "count": 24,
+        "mean": 808.8333333333334,
+        "max": 1981
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        304,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 32,
+        "mean": 2.5625,
+        "max": 16
+      },
+      "wall_ms": {
+        "count": 32,
+        "mean": 15.6875,
+        "max": 55
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request"
+        ],
+        null,
+        "canceled"
+      ],
+      "cpu_ms": {
+        "count": 57,
+        "mean": 17.36842105263158,
+        "max": 44
+      },
+      "wall_ms": {
+        "count": 57,
+        "mean": 792.0701754385965,
+        "max": 10001
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "request",
+          "response"
+        ],
+        201,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 26,
+        "mean": 19.153846153846153,
+        "max": 53
+      },
+      "wall_ms": {
+        "count": 26,
+        "mean": 329.38461538461536,
+        "max": 576
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "request",
+          "response"
+        ],
+        200,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 190,
+        "mean": 6.226315789473684,
+        "max": 36
+      },
+      "wall_ms": {
+        "count": 190,
+        "mean": 2142.1631578947367,
+        "max": 314680
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "getWebSocketEvent"
+        ],
+        null,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 320,
+        "mean": 3.04375,
+        "max": 64
+      },
+      "wall_ms": {
+        "count": 320,
+        "mean": 108.78125,
+        "max": 14973
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "request",
+          "response"
+        ],
+        503,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 2,
+        "mean": 1,
+        "max": 2
+      },
+      "wall_ms": {
+        "count": 2,
+        "mean": 39,
+        "max": 78
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        503,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 2,
+        "mean": 10.5,
+        "max": 19
+      },
+      "wall_ms": {
+        "count": 2,
+        "mean": 320,
+        "max": 348
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "request"
+        ],
+        null,
+        "canceled"
+      ],
+      "cpu_ms": {
+        "count": 26,
+        "mean": 7.461538461538462,
+        "max": 30
+      },
+      "wall_ms": {
+        "count": 26,
+        "mean": 102.96153846153847,
+        "max": 298
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        204,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 20,
+        "mean": 8.55,
+        "max": 31
+      },
+      "wall_ms": {
+        "count": 20,
+        "mean": 1139.75,
+        "max": 3228
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request"
+        ],
+        null,
+        "responseStreamDisconnected"
+      ],
+      "cpu_ms": {
+        "count": 17,
+        "mean": 21.176470588235293,
+        "max": 41
+      },
+      "wall_ms": {
+        "count": 17,
+        "mean": 764.1764705882352,
+        "max": 1861
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "request",
+          "response"
+        ],
+        204,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 8,
+        "mean": 13.75,
+        "max": 15
+      },
+      "wall_ms": {
+        "count": 8,
+        "mean": 731.25,
+        "max": 930
+      }
+    },
+    {
+      "kind": [
+        "durableObject",
+        [
+          "scheduledTime"
+        ],
+        null,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 58,
+        "mean": 2.8620689655172415,
+        "max": 10
+      },
+      "wall_ms": {
+        "count": 58,
+        "mean": 124.96551724137932,
+        "max": 843
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        201,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 40,
+        "mean": 5.15,
+        "max": 20
+      },
+      "wall_ms": {
+        "count": 40,
+        "mean": 919.45,
+        "max": 3050
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "request",
+          "response"
+        ],
+        401,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 14,
+        "mean": 1.8571428571428572,
+        "max": 8
+      },
+      "wall_ms": {
+        "count": 14,
+        "mean": 95.71428571428571,
+        "max": 209
+      }
+    },
+    {
+      "kind": [
+        "stateless",
+        [
+          "cron",
+          "scheduledTime"
+        ],
+        null,
+        "ok"
+      ],
+      "cpu_ms": {
+        "count": 4,
+        "mean": 7.25,
+        "max": 13
+      },
+      "wall_ms": {
+        "count": 4,
+        "mean": 1844.75,
+        "max": 2287
+      }
+    }
+  ]
+}

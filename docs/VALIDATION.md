@@ -1,5 +1,9 @@
 # Validación de Ratchet Rust
 
+## Medición real y pendientes — 2026-10-15
+
+La evidencia más reciente está en [REMOTE_PERFORMANCE_2026-10-15.md](REMOTE_PERFORMANCE_2026-10-15.md): ráfagas, 300 mensajes sostenidos, RTT, observación visual sin polling y regresión de reintentos agotados. No se extrapolan los tiempos de Miniflare a Cloudflare ni se ocultan los rechazos por cuotas. Las secciones siguientes conservan los resultados históricos.
+
 ## Ensayo de cuotas paralelas — 2026-10-15
 
 Resultado: no se adopta el candidato por falta de ganancia consistente. Tres pares de cargas, más diagnósticos con 32 y uno en vuelo: 34.000 mensajes medidos recuperados sin pérdidas ni duplicados. El candidato pasó 57 pruebas Rust y 35 contratos; el runtime conservado quedó restaurado a fuente/WASM original, con 54 pruebas Rust y 35 contratos aprobados. La prueba CUSTOMER nueva verifica el presupuesto compartido HTTP/WSS, rechazo del mensaje 101, reintento duplicado, secuencia y sync exactos.

@@ -1,0 +1,168 @@
+{
+  "base": "https://ratchet-rust-staging-20261015.braian-n-l.workers.dev",
+  "network": {
+    "health_roundtrips_ms": [
+      577.8035,
+      185.01109999999994,
+      166.93640000000005
+    ],
+    "wss_ping_roundtrips_ms": [
+      145.20169999999962,
+      144.82789999999932,
+      145.6790000000001
+    ]
+  },
+  "network_caveat": "Control-frame ping may terminate at the edge; it does not locate the Durable Object or isolate server processing.",
+  "verified": {
+    "ordered_delivery": true,
+    "exact_http_recovery": true,
+    "reconnect": true,
+    "logout_revocation": true,
+    "owner_console": true
+  },
+  "observations": [
+    {
+      "profile": "burst",
+      "messages": 30,
+      "nacks": {},
+      "total_ms": 467.375399999999,
+      "recipient": {
+        "min_ms": 356.3582000000006,
+        "mean_ms": 418.60177000000016,
+        "p50_ms": 404.46500000000015,
+        "p95_ms": 450.4522999999999,
+        "max_ms": 450.6805999999997
+      },
+      "ack": {
+        "min_ms": 356.51220000000103,
+        "mean_ms": 438.6482100000001,
+        "p50_ms": 436.78879999999936,
+        "p95_ms": 450.5595999999996,
+        "max_ms": 450.79509999999937
+      },
+      "samples": [
+        {
+          "revision": 1,
+          "arrival_ms": 356.3582000000006
+        },
+        {
+          "revision": 2,
+          "arrival_ms": 382.4388000000008
+        },
+        {
+          "revision": 3,
+          "arrival_ms": 392.6995000000006
+        },
+        {
+          "revision": 4,
+          "arrival_ms": 392.7593000000006
+        },
+        {
+          "revision": 5,
+          "arrival_ms": 392.8940999999995
+        },
+        {
+          "revision": 6,
+          "arrival_ms": 393.0078000000003
+        },
+        {
+          "revision": 7,
+          "arrival_ms": 393.09659999999985
+        },
+        {
+          "revision": 8,
+          "arrival_ms": 393.1723000000011
+        },
+        {
+          "revision": 9,
+          "arrival_ms": 393.2448000000004
+        },
+        {
+          "revision": 10,
+          "arrival_ms": 393.3017
+        },
+        {
+          "revision": 11,
+          "arrival_ms": 404.03340000000026
+        },
+        {
+          "revision": 12,
+          "arrival_ms": 404.1135999999997
+        },
+        {
+          "revision": 13,
+          "arrival_ms": 404.2386999999999
+        },
+        {
+          "revision": 14,
+          "arrival_ms": 404.3795000000009
+        },
+        {
+          "revision": 15,
+          "arrival_ms": 404.46500000000015
+        },
+        {
+          "revision": 16,
+          "arrival_ms": 404.5599000000002
+        },
+        {
+          "revision": 17,
+          "arrival_ms": 404.65069999999923
+        },
+        {
+          "revision": 18,
+          "arrival_ms": 448.5167999999994
+        },
+        {
+          "revision": 19,
+          "arrival_ms": 448.6778000000004
+        },
+        {
+          "revision": 20,
+          "arrival_ms": 448.8087999999989
+        },
+        {
+          "revision": 21,
+          "arrival_ms": 448.9859999999999
+        },
+        {
+          "revision": 22,
+          "arrival_ms": 449.21079999999984
+        },
+        {
+          "revision": 23,
+          "arrival_ms": 449.40170000000035
+        },
+        {
+          "revision": 24,
+          "arrival_ms": 449.63930000000073
+        },
+        {
+          "revision": 25,
+          "arrival_ms": 449.8069999999998
+        },
+        {
+          "revision": 26,
+          "arrival_ms": 449.9853000000003
+        },
+        {
+          "revision": 27,
+          "arrival_ms": 450.1358
+        },
+        {
+          "revision": 28,
+          "arrival_ms": 450.33700000000044
+        },
+        {
+          "revision": 29,
+          "arrival_ms": 450.4522999999999
+        },
+        {
+          "revision": 30,
+          "arrival_ms": 450.6805999999997
+        }
+      ],
+      "measurement": "Node WSS arrival and durable ACK on one monotonic clock; includes network and any ordered retries; excludes browser render"
+    }
+  ]
+}
