@@ -1,0 +1,12 @@
+.workspace > .error-banner {
+  position: absolute;
+  z-index: 10;
+  top: 70px;
+  left: 0;
+  right: 0;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .14);
+}
+
+@media(max-width:760px) {
+  .workspace > .error-banner { top: 62px; }
+}

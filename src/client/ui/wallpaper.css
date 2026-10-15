@@ -1,0 +1,48 @@
+.messages {
+  background-color: #f3f4f6;
+  background-position: center;
+  background-size: cover;
+  background-attachment: local;
+}
+
+.messages.wallpaper-default { background-image: none; }
+.messages.wallpaper-sand {
+  background-color: #f7f0e3;
+  background-image: radial-gradient(circle at 20px 20px, rgba(153,112,57,.08) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+}
+.messages.wallpaper-sage {
+  background-color: #eaf2eb;
+  background-image: linear-gradient(135deg, rgba(61,113,79,.05) 25%, transparent 25%, transparent 75%, rgba(61,113,79,.05) 75%);
+  background-size: 32px 32px;
+}
+.messages.wallpaper-sky {
+  background-color: #eaf4fb;
+  background-image: radial-gradient(circle at 70% 20%, rgba(54,124,169,.08), transparent 42%);
+}
+.messages.wallpaper-custom {
+  background-image: linear-gradient(rgba(243,244,246,.34), rgba(243,244,246,.34)), var(--chat-wallpaper-image);
+}
+
+.wallpaper-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin: 14px 0;
+}
+.wallpaper-choice {
+  min-height: 64px !important;
+  border: 2px solid transparent !important;
+  color: #1f2937 !important;
+  text-shadow: 0 1px 1px #fff;
+  background: #f3f4f6 !important;
+}
+.wallpaper-choice.selected { border-color: #111827 !important; box-shadow: 0 0 0 2px #fff inset; }
+.wallpaper-preview-sand { background: #f7f0e3 !important; }
+.wallpaper-preview-sage { background: #eaf2eb !important; }
+.wallpaper-preview-sky { background: #eaf4fb !important; }
+.wallpaper-upload { display: inline-flex !important; align-items: center; cursor: pointer; font-weight: 650; }
+
+@media(max-width:560px) {
+  .wallpaper-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

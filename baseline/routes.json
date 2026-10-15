@@ -1,0 +1,618 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "source": "src/worker/index.ts",
+    "line": 56,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/bootstrap/status",
+    "source": "src/worker/bootstrap/routes.ts",
+    "line": 17,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/bootstrap/portable-key/prepare",
+    "source": "src/worker/bootstrap/routes.ts",
+    "line": 23,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/bootstrap/portable-key/complete",
+    "source": "src/worker/bootstrap/routes.ts",
+    "line": 33,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin-provisioning/portable-key/prepare",
+    "source": "src/worker/admin-provisioning/routes.ts",
+    "line": 17,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin-provisioning/portable-key/complete",
+    "source": "src/worker/admin-provisioning/routes.ts",
+    "line": 24,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/owner-console/prepare",
+    "source": "src/worker/owner-console/routes.ts",
+    "line": 7,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/owner-console/complete",
+    "source": "src/worker/owner-console/routes.ts",
+    "line": 12,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/portable-key/login/prepare",
+    "source": "src/worker/auth/routes.ts",
+    "line": 44,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/portable-key/login/complete",
+    "source": "src/worker/auth/routes.ts",
+    "line": 51,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/password/login",
+    "source": "src/worker/auth/routes.ts",
+    "line": 61,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/register/options",
+    "source": "src/worker/auth/routes.ts",
+    "line": 83,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/register/verify",
+    "source": "src/worker/auth/routes.ts",
+    "line": 92,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/login/options",
+    "source": "src/worker/auth/routes.ts",
+    "line": 101,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/login/verify",
+    "source": "src/worker/auth/routes.ts",
+    "line": 109,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/reauth/options",
+    "source": "src/worker/auth/routes.ts",
+    "line": 129,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/passkey/reauth/verify",
+    "source": "src/worker/auth/routes.ts",
+    "line": 136,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/password/activate",
+    "source": "src/worker/auth/routes.ts",
+    "line": 146,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/password/reauth",
+    "source": "src/worker/auth/routes.ts",
+    "line": 163,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/portable-key/reauth/prepare",
+    "source": "src/worker/auth/routes.ts",
+    "line": 176,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/portable-key/reauth/complete",
+    "source": "src/worker/auth/routes.ts",
+    "line": 182,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/logout",
+    "source": "src/worker/auth/routes.ts",
+    "line": 189,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/operator-access/claim",
+    "source": "src/worker/operators/access-routes.ts",
+    "line": 11,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/lead-access/claim",
+    "source": "src/worker/leads/routes.ts",
+    "line": 11,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/lead-access/customer/claim",
+    "source": "src/worker/leads/routes.ts",
+    "line": 27,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/leads/:chatId/account",
+    "source": "src/worker/leads/routes.ts",
+    "line": 42,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/leads/:chatId/access",
+    "source": "src/worker/leads/routes.ts",
+    "line": 48,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/leads/:chatId/account/password",
+    "source": "src/worker/leads/routes.ts",
+    "line": 52,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sessions/current",
+    "source": "src/worker/auth/session-routes.ts",
+    "line": 12,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/sessions/current/display-name",
+    "source": "src/worker/auth/session-routes.ts",
+    "line": 31,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sessions",
+    "source": "src/worker/auth/session-routes.ts",
+    "line": 43,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sessions/:id",
+    "source": "src/worker/auth/session-routes.ts",
+    "line": 45,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/devices",
+    "source": "src/worker/devices/routes.ts",
+    "line": 10,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/devices/:id/certificate",
+    "source": "src/worker/devices/routes.ts",
+    "line": 15,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/devices/:id/approve",
+    "source": "src/worker/devices/routes.ts",
+    "line": 26,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/devices/:id",
+    "source": "src/worker/devices/routes.ts",
+    "line": 35,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/invitations",
+    "source": "src/worker/invitations/routes.ts",
+    "line": 12,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/invitations/:token/claim",
+    "source": "src/worker/invitations/routes.ts",
+    "line": 34,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/operators",
+    "source": "src/worker/operators/routes.ts",
+    "line": 22,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/operators",
+    "source": "src/worker/operators/routes.ts",
+    "line": 29,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/operators/:userId/access-grants",
+    "source": "src/worker/operators/routes.ts",
+    "line": 36,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/operators/:userId/access-grants",
+    "source": "src/worker/operators/routes.ts",
+    "line": 44,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/operators/:userId/access-grants/:grantId",
+    "source": "src/worker/operators/routes.ts",
+    "line": 52,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/operators/:userId",
+    "source": "src/worker/operators/routes.ts",
+    "line": 61,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/crypto/prekeys",
+    "source": "src/worker/crypto/routes.ts",
+    "line": 16,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/crypto/prekeys/status",
+    "source": "src/worker/crypto/routes.ts",
+    "line": 27,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/crypto/prekeys/consume",
+    "source": "src/worker/crypto/routes.ts",
+    "line": 35,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/crypto/devices/:userId/bundle",
+    "source": "src/worker/crypto/routes.ts",
+    "line": 51,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 43,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 47,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/sync",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 52,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/messages/sender-sequence",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 53,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/messages/by-client-id/:id",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 54,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/messages",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 55,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/messages/batch",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 61,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/receipts/batch",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 70,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/receipts",
+    "source": "src/worker/durable/sqlite-routes.ts",
+    "line": 77,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats",
+    "source": "src/worker/chats/routes.ts",
+    "line": 29,
+    "shadowed": true,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId",
+    "source": "src/worker/chats/routes.ts",
+    "line": 31,
+    "shadowed": true,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/wallpaper",
+    "source": "src/worker/chats/routes.ts",
+    "line": 39,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/wallpaper/recipients",
+    "source": "src/worker/chats/routes.ts",
+    "line": 44,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/wallpaper/image",
+    "source": "src/worker/chats/routes.ts",
+    "line": 49,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/chats/:chatId/wallpaper",
+    "source": "src/worker/chats/routes.ts",
+    "line": 64,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/chats/:chatId/wallpaper/uploads/:wallpaperId/image",
+    "source": "src/worker/chats/routes.ts",
+    "line": 80,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/wallpaper/uploads/:wallpaperId/commit",
+    "source": "src/worker/chats/routes.ts",
+    "line": 109,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/wallpaper/:wallpaperId/envelopes",
+    "source": "src/worker/chats/routes.ts",
+    "line": 129,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/sync",
+    "source": "src/worker/chats/routes.ts",
+    "line": 151,
+    "shadowed": true,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chats/:chatId/realtime",
+    "source": "src/worker/realtime/routes.ts",
+    "line": 11,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/push/config",
+    "source": "src/worker/push/routes.ts",
+    "line": 14,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/push/subscriptions",
+    "source": "src/worker/push/routes.ts",
+    "line": 16,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/push/subscriptions/:id",
+    "source": "src/worker/push/routes.ts",
+    "line": 22,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chats/:chatId/attachments",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 15,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/attachments/:fileId/parts/:partNumber",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 22,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/attachments/:fileId/complete",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 30,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attachments/:fileId",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 37,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/attachments/:fileId",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 43,
+    "shadowed": false,
+    "implementation": "pending"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attachments/:fileId/content",
+    "source": "src/worker/attachments/routes.ts",
+    "line": 49,
+    "shadowed": false,
+    "implementation": "pending"
+  }
+]

@@ -1,6 +1,6 @@
 # Ratchet Rust: especificación de migración
 
-Fecha: 2026-10-15. Estado: diseño propuesto para revisión; implementación pendiente.
+Fecha: 2026-10-15. Estado: aprobado; implementación en curso.
 
 ## Objetivo y base
 
@@ -8,6 +8,13 @@ Migrar todo el backend de Ratchet a Rust y publicarlo en
 https://github.com/Shisetsu-Code/Ratchet-Rust. Conservar la interfaz React,
 los contratos HTTP/WSS y las capacidades de la versión local Ratchet-SQLite.
 El despliegue y la validación remota se harán después, en recursos separados.
+
+Actualización aprobada por el usuario: los datos de prueba y mensajes guardados
+son descartables. La versión Rust arranca con bases nuevas; no implementar
+migración de datos antiguos ni adaptadores de formatos históricos. Consolidar
+el esquema y retirar código obsoleto cuando termine la paridad funcional.
+La verificación de primitivas criptográficas usa vectores sintéticos como
+prueba de corrección, no como obligación de importar conversaciones viejas.
 
 La fuente incluye los archivos locales modificados y los nuevos archivos de
 Ratchet-SQLite, no solamente su último commit. Incluye consola de owner,
@@ -74,9 +81,9 @@ historial, recibos, adjuntos, fondo compartido y notificaciones push.
 Conservar tareas programadas, recuperación de operaciones y rotación de claves.
 Las funciones web retiradas de recuperación/verificación no deben reaparecer.
 
-Mantener hashes de contraseña y formatos criptográficos interoperables donde
-existan. Usar bibliotecas mantenidas o Web Crypto mediante bindings, con vectores
-de compatibilidad; no inventar primitivas ni rebajar la verificación de firmas.
+Definir un único formato de credenciales y almacenamiento para la instalación
+nueva. Usar bibliotecas mantenidas o Web Crypto mediante bindings, con vectores
+de corrección; no inventar primitivas ni rebajar la verificación de firmas.
 La recuperación por consola conserva desafío firmado, expiración, uso único,
 archivo de llave y revocación. La sesión no sustituye los permisos por recurso.
 

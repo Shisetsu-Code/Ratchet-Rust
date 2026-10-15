@@ -1,0 +1,41 @@
+.referral-link-card {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 1200;
+  width: min(680px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 14px;
+  background: Canvas;
+  color: CanvasText;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.referral-link-card p {
+  margin: 4px 0 0;
+}
+
+.referral-link-card button {
+  flex: 0 0 auto;
+}
+
+.referral-link-error {
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .referral-link-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .referral-link-card button {
+    width: 100%;
+  }
+}

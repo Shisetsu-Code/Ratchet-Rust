@@ -1,0 +1,15 @@
+import { writeFile } from 'node:fs/promises';
+const bytes = value => new TextEncoder().encode(value);
+const master = new Uint8Array(Array.from({length:32}, (_,i)=>i));
+const nonce = new Uint8Array(Array.from({length:12}, (_,i)=>i));
+const metadata = { chat_id:'11111111-1111-4111-8111-111111111111',message_id:'22222222-2222-4222-8222-222222222222',client_message_id:'33333333-3333-4333-8333-333333333333',sender_user_id:'44444444-4444-4444-8444-444444444444',sender_device_id:'55555555-5555-4555-8555-555555555555',sender_sequence:7,mutation:null,reply_to_message_id:null,attachment_ids:'[]' };
+const plaintext = 'eyJ0ZXh0IjoiSG9sYSJ9';
+const key = await crypto.subtle.importKey('raw',master,'HKDF',false,['deriveKey']);
+const derive = (info, algorithm, usages) => crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:bytes(metadata.chat_id),info:bytes(info)},key,algorithm,false,usages);
+const aes = await derive('ratchet-sqlite-storage-v1',{name:'AES-GCM',length:256},['encrypt']);
+const mac = await derive('ratchet-sqlite-idempotency-v1',{name:'HMAC',hash:'SHA-256'},['sign']);
+const aad=bytes(JSON.stringify([metadata.chat_id,metadata.message_id,metadata.client_message_id,metadata.sender_user_id,metadata.sender_device_id,metadata.sender_sequence,metadata.mutation,metadata.reply_to_message_id,metadata.attachment_ids]));
+const fingerprintBody=bytes(JSON.stringify([metadata.chat_id,metadata.sender_user_id,metadata.sender_device_id,metadata.sender_sequence,metadata.client_message_id,plaintext,metadata.mutation,metadata.reply_to_message_id,metadata.attachment_ids]));
+const encoded=value=>Buffer.from(value).toString('base64');
+await writeFile('baseline/storage-crypto-vector.json',JSON.stringify({synthetic:true,master:encoded(master),nonce:encoded(nonce),metadata,plaintext,ciphertext:encoded(await crypto.subtle.encrypt({name:'AES-GCM',iv:nonce,additionalData:aad},aes,bytes(plaintext))),fingerprint:encoded(await crypto.subtle.sign('HMAC',mac,fingerprintBody))},null,2)+'\n');
+console.log('Synthetic Web Crypto interoperability vector written.');

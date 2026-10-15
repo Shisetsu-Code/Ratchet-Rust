@@ -1,0 +1,15 @@
+/target/
+/node_modules/
+/dist/
+/build/
+/.wrangler/
+/.superpowers/
+/.serena/
+.dev.vars*
+.env*
+private.json
+*.key
+*.pem
+__pycache__/
+test-results/
+playwright-report/
