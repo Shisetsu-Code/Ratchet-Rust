@@ -15,5 +15,20 @@ test('an interrupted authority write cannot commit after recovery releases its f
     db.exec("UPDATE authority_operations SET status='ABORTED' WHERE operation_id='completed' AND status='PENDING'");
     assert.equal(db.prepare("SELECT status FROM authority_operations WHERE operation_id='completed'").get().status,'COMMITTED');
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM test_values').get().n,1);
+    // Recovery may beat even the initial PENDING insertion after an uncertain request.
+    db.exec("INSERT OR IGNORE INTO authority_operations VALUES('missing','ABORTED','now','now')");
+    assert.throws(()=>db.exec("INSERT INTO authority_operations VALUES('missing','PENDING','late',NULL)"));
+    assert.equal(db.prepare("SELECT status FROM authority_operations WHERE operation_id='missing'").get().status,'ABORTED');
+  }finally{db.close();}
+});
+
+test('late fencing cannot recreate a fence that recovery has already released',async()=>{
+  const db=new DatabaseSync(':memory:');
+  try{
+    db.exec('CREATE TABLE authority_fence(id TEXT PRIMARY KEY); CREATE TABLE authority_releases(id TEXT PRIMARY KEY);');
+    const fence=db.prepare(await readFile('crates/worker/src/chat/fence.sql','utf8'));
+    db.prepare('INSERT INTO authority_releases VALUES(?)').run('recovered');
+    fence.run('recovered');assert.equal(db.prepare('SELECT COUNT(*) AS n FROM authority_fence').get().n,0);
+    fence.run('new');assert.equal(db.prepare('SELECT id FROM authority_fence').get().id,'new');
   }finally{db.close();}
 });

@@ -24,6 +24,11 @@ impl From<DomainError> for ApiError {
 }
 
 impl ApiError {
+    pub fn retryable(code: &'static str, status: u16) -> Self {
+        let mut error = DomainError::new(code, status);
+        error.retryable = true;
+        Self::Domain(error)
+    }
     pub fn domain(code: &'static str, status: u16) -> Self {
         Self::Domain(DomainError::new(code, status))
     }

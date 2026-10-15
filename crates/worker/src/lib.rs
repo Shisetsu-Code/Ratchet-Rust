@@ -6,6 +6,8 @@ pub use chat::ChatRealtime;
 mod db;
 mod http;
 mod password;
+mod portable;
+mod provisioning;
 use worker::*;
 
 #[event(fetch)]
@@ -26,11 +28,43 @@ pub async fn main(mut request: Request, env: Env, _ctx: Context) -> Result<Respo
 async fn handle(request: &mut Request, env: &Env) -> http::ApiResult<Response> {
     http::same_origin(request, env)?;
     http::network_quota(request, env).await?;
+    let path = request.path();
+    if request.method() == Method::Post && path == "/api/v1/auth/logout" {
+        return chat::control::public(request, env, "logout", "").await;
+    }
+    if request.method() == Method::Delete
+        && let Some(target) = path.strip_prefix("/api/v1/sessions/")
+    {
+        return chat::control::public(request, env, "session.revoke", target).await;
+    }
+    if request.method() == Method::Delete
+        && let Some(target) = path.strip_prefix("/api/v1/devices/")
+    {
+        return chat::control::public(request, env, "device.revoke", target).await;
+    }
     if request.path().starts_with("/api/v1/chats/") {
         return chat::routes::handle(request, env).await;
     }
     if request.method() == Method::Post {
         match request.path().as_str() {
+            "/api/v1/auth/portable-key/login/prepare" => {
+                return portable::prepare(request, env, false).await;
+            }
+            "/api/v1/auth/portable-key/login/complete" => {
+                return portable::complete(request, env, false).await;
+            }
+            "/api/v1/auth/portable-key/reauth/prepare" => {
+                return portable::prepare(request, env, true).await;
+            }
+            "/api/v1/auth/portable-key/reauth/complete" => {
+                return portable::complete(request, env, true).await;
+            }
+            "/api/v1/admin-provisioning/portable-key/prepare" => {
+                return provisioning::prepare(request, env).await;
+            }
+            "/api/v1/admin-provisioning/portable-key/complete" => {
+                return provisioning::complete(request, env).await;
+            }
             "/api/v1/auth/password/login" => return password::login(request, env).await,
             "/api/v1/bootstrap/portable-key/prepare" => {
                 return bootstrap::prepare(request, env).await;

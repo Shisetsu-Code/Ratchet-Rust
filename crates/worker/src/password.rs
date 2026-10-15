@@ -20,7 +20,7 @@ struct Login {
 }
 #[derive(Deserialize)]
 #[serde(tag = "mode", rename_all = "lowercase")]
-enum Device {
+pub(crate) enum Device {
     Existing {
         device_id: String,
     },
@@ -29,6 +29,34 @@ enum Device {
         display_name: String,
         crypto_identity_public_key: String,
     },
+}
+impl Device {
+    pub(crate) fn fields(&self) -> ApiResult<(&str, Option<&str>, Option<&str>)> {
+        let (id, name, key) = match self {
+            Self::Existing { device_id } => (device_id.as_str(), None, None),
+            Self::New {
+                device_id,
+                display_name,
+                crypto_identity_public_key,
+            } => {
+                let name = display_name.trim();
+                if !(1..=120).contains(&name.encode_utf16().count())
+                    || !(32..=4096).contains(&crypto_identity_public_key.encode_utf16().count())
+                {
+                    return Err(ApiError::domain("VALIDATION_ERROR", 422));
+                }
+                (
+                    device_id.as_str(),
+                    Some(name),
+                    Some(crypto_identity_public_key.as_str()),
+                )
+            }
+        };
+        if !is_uuid(id) {
+            return Err(ApiError::domain("VALIDATION_ERROR", 422));
+        }
+        Ok((id, name, key))
+    }
 }
 #[derive(Deserialize)]
 struct LoginCredential {
@@ -84,22 +112,7 @@ pub async fn login(request: &mut Request, env: &Env) -> ApiResult<Response> {
     if login_name.is_empty() || login_name.encode_utf16().count() > 64 {
         return Err(ApiError::domain("VALIDATION_ERROR", 422));
     }
-    let device_id = match &request.device {
-        Device::Existing { device_id } | Device::New { device_id, .. } => device_id,
-    };
-    if !is_uuid(device_id) {
-        return Err(ApiError::domain("VALIDATION_ERROR", 422));
-    }
-    if let Device::New {
-        display_name,
-        crypto_identity_public_key,
-        ..
-    } = &request.device
-        && (!(1..=120).contains(&display_name.trim().encode_utf16().count())
-            || !(32..=4096).contains(&crypto_identity_public_key.encode_utf16().count()))
-    {
-        return Err(ApiError::domain("VALIDATION_ERROR", 422));
-    }
+    let (device_id, _, _) = request.device.fields()?;
     let db = Db(env.d1("DB")?);
     let now = now_iso();
     let credential=db.first::<LoginCredential>("SELECT pc.user_id,pc.algorithm,pc.iterations,pc.salt,pc.verifier,u.status AS user_status FROM password_credentials pc JOIN users u ON u.user_id=pc.user_id WHERE pc.login_name=?1 LIMIT 1",&[json!(login_name)]).await?;

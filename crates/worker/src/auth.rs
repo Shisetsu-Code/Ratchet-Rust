@@ -97,6 +97,19 @@ pub fn require_authorized(auth: &AuthContext) -> ApiResult<()> {
     Ok(())
 }
 
+pub fn require_recent(auth: &AuthContext) -> ApiResult<()> {
+    let timestamp = auth
+        .authenticator_verified_at
+        .as_deref()
+        .map(js_sys::Date::parse)
+        .unwrap_or(f64::NAN);
+    let age = Date::now().as_millis() as f64 - timestamp;
+    if !age.is_finite() || !(0.0..=300_000.0).contains(&age) {
+        return Err(ApiError::domain("REAUTHENTICATION_REQUIRED", 403));
+    }
+    Ok(())
+}
+
 pub async fn current_session(env: &Env, auth: &AuthContext) -> ApiResult<Response> {
     let db = Db(env.d1("DB")?);
     let workspace_ids=db.all("SELECT workspace_id FROM workspace_memberships WHERE user_id=?1 AND status='ACTIVE' AND revoked_at IS NULL ORDER BY created_at,workspace_id",&[json!(auth.user_id)]).await?

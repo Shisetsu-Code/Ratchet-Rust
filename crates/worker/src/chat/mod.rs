@@ -1,4 +1,5 @@
 mod authority;
+pub mod control;
 pub mod routes;
 mod storage;
 use crate::http::{self, ApiError, ApiResult};
@@ -31,6 +32,7 @@ pub struct ChatRealtime {
     env: Env,
     store: Store,
     initialized: Cell<bool>,
+    registered: Cell<bool>,
     generation: Cell<u64>,
     crypto: RefCell<Option<StorageCrypto>>,
     send_lane: ratchet_core::lane::FifoLane,
@@ -77,9 +79,30 @@ impl ChatRealtime {
             return Ok(lease);
         }
         let generation = self.generation.get();
-        let lease = authority::resolve(&self.env, meta).await?;
+        let lease = if self.registered.get() {
+            authority::resolve(&self.env, meta).await?
+        } else {
+            let mut response = routes::forward(
+                &self.env,
+                Call {
+                    op: "control.register".into(),
+                    authority: meta.clone(),
+                    data: Value::Null,
+                },
+            )
+            .await?;
+            if response.status_code() != 200 {
+                if response.status_code() == 403 {
+                    return Err(ApiError::domain("CHAT_NOT_AVAILABLE", 403));
+                }
+                return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
+            }
+            let lease: Lease = response.json().await?;
+            self.registered.set(true);
+            lease
+        };
         if generation != self.generation.get() {
-            return Err(ApiError::domain("AUTHORITY_RETRY", 503));
+            return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
         }
         authority::save(&self.store.sql(), meta, &lease)?;
         Ok(lease)
@@ -97,7 +120,7 @@ impl ChatRealtime {
             .await?
             .success
         {
-            return Err(ApiError::domain("MESSAGE_RATE_LIMITED", 503));
+            return Err(ApiError::retryable("MESSAGE_RATE_LIMITED", 503));
         }
         if lease.user_role == "CUSTOMER" && !duplicate {
             for binding in [
@@ -141,7 +164,7 @@ impl ChatRealtime {
         })?;
         authority::assert_open(&self.store.sql())?;
         if generation != self.generation.get() {
-            return Err(ApiError::domain("AUTHORITY_RETRY", 503));
+            return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
         }
         let commit = self.store.commit(row, lease.can_mutate)?;
         drop(lane);
@@ -184,6 +207,9 @@ impl ChatRealtime {
         } else {
             http::read_json(&mut request, 2 * 1024 * 1024 + 4096).await?
         };
+        if call.op.starts_with("control.") {
+            return self.control_handle(call).await;
+        }
         let meta = &call.authority;
         if !is_uuid(&meta.chat_id) {
             return Err(ApiError::domain("VALIDATION_ERROR", 422));
@@ -193,21 +219,35 @@ impl ChatRealtime {
                 .as_str()
                 .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
             self.generation.set(self.generation.get() + 1);
+            self.registered.set(true);
             self.store
                 .sql()
                 .exec("DELETE FROM connection_grants", None)?;
             if call.op == "fence" {
+                self.store
+                    .sql()
+                    .exec(include_str!("fence.sql"), vec![id.into()])?;
+            } else {
                 self.store.sql().exec(
-                    "INSERT OR IGNORE INTO authority_fence VALUES(?)",
+                    "INSERT OR IGNORE INTO authority_releases VALUES(?)",
                     vec![id.into()],
                 )?;
-                for socket in self.state.get_websockets() {
-                    let _ = socket.close(Some(4001), Some("Account permissions changed"));
-                }
-            } else {
                 self.store
                     .sql()
                     .exec("DELETE FROM authority_fence WHERE id=?", vec![id.into()])?;
+                for socket in self.state.get_websockets() {
+                    if let Some(peer) = socket.deserialize_attachment::<Authority>()? {
+                        match self.authorize(&peer, true).await {
+                            Ok(_) => {}
+                            Err(ApiError::Domain(error)) if error.status < 500 => {
+                                let _ = socket.close(Some(4001), Some("Session ended"));
+                            }
+                            Err(_) => {
+                                let _ = socket.close(Some(1013), Some("Please reconnect"));
+                            }
+                        }
+                    }
+                }
             }
             self.store.durable().await?;
             return http::json(&json!({"ok":true}));
@@ -314,6 +354,7 @@ impl DurableObject for ChatRealtime {
             env,
             store,
             initialized: Cell::new(false),
+            registered: Cell::new(false),
             generation: Cell::new(0),
             crypto: RefCell::new(None),
             send_lane: ratchet_core::lane::FifoLane::new(),
@@ -324,6 +365,12 @@ impl DurableObject for ChatRealtime {
             Ok(r) => Ok(r),
             Err(error) => error.response("chat-runtime"),
         }
+    }
+    async fn alarm(&self) -> Result<Response> {
+        self.recover_control_alarm()
+            .await
+            .map_err(|_| Error::RustError("Authority recovery must retry".into()))?;
+        Response::empty()
     }
     async fn websocket_message(
         &self,
@@ -343,8 +390,15 @@ impl DurableObject for ChatRealtime {
         };
         match value["type"].as_str() {
             Some("ping") => {
-                if self.authorize(&meta, false).await.is_err() {
-                    return socket.close(Some(4001), Some("Session expired"));
+                match self.authorize(&meta, false).await {
+                    Ok(_) => {}
+                    Err(ApiError::Domain(error)) if error.retryable || error.status >= 500 => {
+                        return Ok(());
+                    }
+                    Err(ApiError::Domain(_)) => {
+                        return socket.close(Some(4001), Some("Session expired"));
+                    }
+                    Err(_) => return Ok(()),
                 }
                 socket.send(&json!({"type":"pong","chat_id":meta.chat_id,"revision":self.store.revision().unwrap_or_default()}))?;
             }

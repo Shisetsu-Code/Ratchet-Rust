@@ -5,7 +5,8 @@
     "source": "src/worker/index.ts",
     "line": 56,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",
@@ -13,7 +14,8 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 17,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -21,7 +23,8 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 23,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -29,7 +32,8 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 33,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -37,7 +41,8 @@
     "source": "src/worker/admin-provisioning/routes.ts",
     "line": 17,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -45,7 +50,8 @@
     "source": "src/worker/admin-provisioning/routes.ts",
     "line": 24,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -69,7 +75,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 44,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -77,7 +84,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 51,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -85,7 +93,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 61,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -149,7 +158,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 163,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -157,7 +167,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 176,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -165,7 +176,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 182,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -173,7 +185,8 @@
     "source": "src/worker/auth/routes.ts",
     "line": 189,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -229,7 +242,8 @@
     "source": "src/worker/auth/session-routes.ts",
     "line": 12,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "PATCH",
@@ -245,7 +259,8 @@
     "source": "src/worker/auth/session-routes.ts",
     "line": 43,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "DELETE",
@@ -253,7 +268,8 @@
     "source": "src/worker/auth/session-routes.ts",
     "line": 45,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",
@@ -285,7 +301,8 @@
     "source": "src/worker/devices/routes.ts",
     "line": 35,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -405,7 +422,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 52,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",
@@ -413,7 +431,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 53,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",
@@ -421,7 +440,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 54,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -429,7 +449,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 55,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -445,7 +466,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 70,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "POST",
@@ -453,7 +475,8 @@
     "source": "src/worker/durable/sqlite-routes.ts",
     "line": 77,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",
@@ -541,7 +564,8 @@
     "source": "src/worker/realtime/routes.ts",
     "line": 11,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "verified-local",
+    "evidence": "tests/contracts/auth.mjs"
   },
   {
     "method": "GET",

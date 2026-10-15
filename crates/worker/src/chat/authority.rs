@@ -29,6 +29,10 @@ pub struct Lease {
 }
 
 pub fn initialize(sql: &SqlStorage) -> ApiResult<()> {
+    sql.exec(
+        "CREATE TABLE IF NOT EXISTS authority_releases(id TEXT PRIMARY KEY)",
+        None,
+    )?;
     sql.exec("CREATE TABLE IF NOT EXISTS connection_grants(id TEXT PRIMARY KEY,auth TEXT NOT NULL,expires REAL NOT NULL)",None)?;
     sql.exec(
         "CREATE TABLE IF NOT EXISTS authority_fence(id TEXT PRIMARY KEY)",

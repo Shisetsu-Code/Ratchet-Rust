@@ -19,7 +19,11 @@ pub fn authority(auth: &AuthContext, chat_id: &str) -> Authority {
 pub async fn forward(env: &Env, call: Call) -> ApiResult<Response> {
     let namespace = env.durable_object("CHAT_REALTIME")?;
     let stub = namespace
-        .id_from_name(&call.authority.chat_id)?
+        .id_from_name(if call.op.starts_with("control.") {
+            super::control::NAME
+        } else {
+            &call.authority.chat_id
+        })?
         .get_stub()?;
     let mut init = RequestInit::new();
     let headers = Headers::new();

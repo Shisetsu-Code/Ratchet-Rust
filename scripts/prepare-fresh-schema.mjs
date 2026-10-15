@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readdir,readFile,mkdir,writeFile } from 'node:fs/promises';
+import { readdir,readFile,mkdir,writeFile,access } from 'node:fs/promises';
 import { join,resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -21,6 +21,9 @@ export async function freshSchema(source) {
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   if(!process.argv[2])throw new Error('Usage: node scripts/prepare-fresh-schema.mjs SOURCE');
+  // This is the initial capture tool, never a regeneration of the maintained Rust schema.
+  try{await access('db/migrations/0001_ratchet_rust.sql');throw new Error('Rust schema already exists; edit its maintained migration instead.');}
+  catch(error){if(error.code!=='ENOENT')throw error;}
   const schema=await freshSchema(resolve(process.argv[2]));
   await mkdir('db/migrations',{recursive:true});
   await writeFile('db/migrations/0001_ratchet_rust.sql',schema);

@@ -49,7 +49,7 @@ async fn completed(db: &Db) -> ApiResult<bool> {
         .is_some())
 }
 
-fn require_token(env: &Env, provided: &str) -> ApiResult<()> {
+pub(crate) fn require_token(env: &Env, provided: &str) -> ApiResult<()> {
     let token = env
         .secret("BOOTSTRAP_TOKEN")
         .map(|s| s.to_string())
