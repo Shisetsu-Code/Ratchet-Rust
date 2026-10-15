@@ -1,0 +1,185 @@
+diff --git a/crates/worker/src/chat/mod.rs b/crates/worker/src/chat/mod.rs
+index 0414394..7540e84 100644
+--- a/crates/worker/src/chat/mod.rs
++++ b/crates/worker/src/chat/mod.rs
+@@ -1,6 +1,7 @@
+ pub(crate) mod authority;
+ pub mod control;
+ pub mod metadata;
++mod quota;
+ pub mod routes;
+ mod send;
+ mod storage;
+@@ -153,30 +154,11 @@ impl ChatRealtime {
+         if !allowed {
+             return Err(ApiError::retryable("MESSAGE_RATE_LIMITED", 503));
+         }
+-        if lease.user_role == "CUSTOMER" && !duplicate {
+-            for binding in [
+-                "CUSTOMER_MESSAGE_BURST_RATE_LIMITER",
+-                "CUSTOMER_MESSAGE_SUSTAINED_RATE_LIMITER",
+-            ] {
+-                let started = probe.now();
+-                let allowed = self
+-                    .env
+-                    .rate_limiter(binding)?
+-                    .limit(format!("customer:{}", meta.user_id))
+-                    .await?
+-                    .success;
+-                probe.record(
+-                    if binding == "CUSTOMER_MESSAGE_BURST_RATE_LIMITER" {
+-                        "quota_customer_burst_io"
+-                    } else {
+-                        "quota_customer_sustained_io"
+-                    },
+-                    started,
+-                );
+-                if !allowed {
+-                    return Err(ApiError::retryable("CUSTOMER_MESSAGE_RATE_LIMITED", 429));
+-                }
+-            }
++        if lease.user_role == "CUSTOMER"
++            && !duplicate
++            && !quota::customer(&self.env, &meta.user_id, probe).await?
++        {
++            return Err(ApiError::retryable("CUSTOMER_MESSAGE_RATE_LIMITED", 429));
+         }
+         Ok(())
+     }
+diff --git a/crates/worker/src/chat/quota.rs b/crates/worker/src/chat/quota.rs
+new file mode 100644
+index 0000000..8830b31
+--- /dev/null
++++ b/crates/worker/src/chat/quota.rs
+@@ -0,0 +1,131 @@
++use crate::http::ApiResult;
++use std::{cell::Cell, future::Future};
++use worker::Env;
++
++pub(super) async fn customer(
++    env: &Env,
++    user_id: &str,
++    probe: &mut super::timing::Probe,
++) -> ApiResult<bool> {
++    let burst_ms = Cell::new(0.0);
++    let sustained_ms = Cell::new(0.0);
++    let enabled = probe.enabled();
++    let key = format!("customer:{user_id}");
++    let allowed = customer_checks(
++        bucket(
++            env,
++            "CUSTOMER_MESSAGE_BURST_RATE_LIMITER",
++            key.clone(),
++            enabled,
++            &burst_ms,
++        ),
++        bucket(
++            env,
++            "CUSTOMER_MESSAGE_SUSTAINED_RATE_LIMITER",
++            key,
++            enabled,
++            &sustained_ms,
++        ),
++    )
++    .await;
++    // Child spans overlap. quota_io in the caller measures the combined wait.
++    probe.add_elapsed("quota_customer_burst_io", burst_ms.get());
++    probe.add_elapsed("quota_customer_sustained_io", sustained_ms.get());
++    allowed
++}
++
++async fn bucket(
++    env: &Env,
++    binding: &str,
++    key: String,
++    measured: bool,
++    elapsed: &Cell<f64>,
++) -> ApiResult<bool> {
++    let started = super::timing::snapshot(measured);
++    let result = env.rate_limiter(binding)?.limit(key).await;
++    elapsed.set(super::timing::snapshot(measured) - started);
++    Ok(result?.success)
++}
++
++/// Both customer buckets must settle before the message may proceed.
++pub(super) async fn customer_checks(
++    burst: impl Future<Output = ApiResult<bool>>,
++    sustained: impl Future<Output = ApiResult<bool>>,
++) -> ApiResult<bool> {
++    let (burst, sustained) = futures_util::join!(burst, sustained);
++    let burst = burst?;
++    let sustained = sustained?;
++    Ok(burst && sustained)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::http::ApiError;
++    use futures_util::FutureExt;
++    use std::{cell::Cell, future::poll_fn, task::Poll};
++
++    #[test]
++    fn customer_buckets_start_without_waiting_for_each_other() {
++        let second_started = Cell::new(false);
++        let burst = poll_fn(|cx| {
++            if second_started.get() {
++                Poll::Ready(Ok(true))
++            } else {
++                cx.waker().wake_by_ref();
++                Poll::Pending
++            }
++        });
++        let sustained = async {
++            second_started.set(true);
++            Ok(true)
++        };
++        let mut checks = Box::pin(customer_checks(burst, sustained));
++        let mut accepted = false;
++        for _ in 0..3 {
++            if let Some(result) = checks.as_mut().now_or_never() {
++                accepted = result.is_ok_and(|allowed| allowed);
++                break;
++            }
++        }
++        assert!(accepted, "independent quota checks must both be polled");
++    }
++    #[test]
++    fn error_waits_for_the_other_started_check_to_settle() {
++        let ready = Cell::new(false);
++        let started = Cell::new(false);
++        let sustained = poll_fn(|_| {
++            started.set(true);
++            if ready.get() {
++                Poll::Ready(Ok(true))
++            } else {
++                Poll::Pending
++            }
++        });
++        let mut checks = Box::pin(customer_checks(
++            async { Err(ApiError::retryable("QUOTA_UNAVAILABLE", 503)) },
++            sustained,
++        ));
++        assert!(checks.as_mut().now_or_never().is_none());
++        assert!(started.get());
++        ready.set(true);
++        assert!(matches!(checks.as_mut().now_or_never(), Some(Err(_))));
++    }
++    #[test]
++    fn both_buckets_must_allow_and_either_error_denies() {
++        for burst in [false, true] {
++            for sustained in [false, true] {
++                assert!(
++                    matches!(customer_checks(async { Ok(burst) }, async { Ok(sustained) }).now_or_never(), Some(Ok(allowed)) if allowed == (burst && sustained))
++                );
++            }
++        }
++        assert!(matches!(
++            customer_checks(async { Ok(false) }, async {
++                Err(ApiError::retryable("QUOTA_UNAVAILABLE", 503))
++            })
++            .now_or_never(),
++            Some(Err(_))
++        ));
++    }
++}

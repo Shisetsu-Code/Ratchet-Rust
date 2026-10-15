@@ -1,5 +1,26 @@
 # Comparación local TypeScript / Rust
 
+## Experimento de cuotas paralelas
+
+El [ensayo](../../docs/QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md) queda aislado como `parallel-customer-quotas.patch`; el runtime normal conserva la versión secuencial. Para reproducirlo con las herramientas existentes, partiendo del runtime secuencial y una carpeta de artefacto nueva:
+
+```powershell
+npm run build:worker
+node experiments/backend-benchmark/capture-rust-artifact.mjs .wrangler/quota-baseline-new
+git apply --check experiments/backend-benchmark/parallel-customer-quotas.patch
+git apply experiments/backend-benchmark/parallel-customer-quotas.patch
+npm run build:worker
+node experiments/backend-benchmark/run.mjs --variants sequential,rust --sequential-artifact .wrangler/quota-baseline-new --rounds 3 --inflight 32
+node experiments/backend-benchmark/run.mjs --variants sequential,rust --sequential-artifact .wrangler/quota-baseline-new --rounds 1 --cases 1000-one-chat-256B --inflight 32 --profile
+node experiments/backend-benchmark/run.mjs --variants sequential,rust --sequential-artifact .wrangler/quota-baseline-new --rounds 1 --cases 1000-one-chat-256B --inflight 1 --profile
+git apply --reverse experiments/backend-benchmark/parallel-customer-quotas.patch
+npm run build:worker
+```
+
+`capture-rust-artifact.mjs` debe ejecutarse después de compilar: conserva JS, WASM y huellas de fuente, exige una carpeta dentro de `.wrangler` y rechaza sobreescribirla. El runner comprueba sus hashes y alterna el orden pedido/reverso entre rondas. Ambas variantes usan el mismo esquema Rust, límites, clientes y verificador. No instala ni despliega.
+
+`comparison-summary.mjs --inputdir CARPETA_PRINCIPAL --diagnosticdir CARPETA_DIAGNOSTICO_32` genera medias, medianas, rangos, cada par y el desglose de cuotas; exige las tres rondas completas y todas las verificaciones de integridad. `rust` etiqueta al candidato durante el experimento, sin implicar adopción.
+
 ## Diagnóstico de etapas
 
 `--profile --variants rust` habilita exclusivamente en el runtime local `RATCHET_TIMING_PROBE=sample10`. Se muestrean las secuencias 11, 21, 31, 41 y 51 de cada remitente; warmups fuera. `--cases 1000-one-chat-256B` permite aislar un caso y `--inflight 1` contrastar las esperas bajo concurrencia. Sin estas opciones, el benchmark comparativo conserva su comportamiento.

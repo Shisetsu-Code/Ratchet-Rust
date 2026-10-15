@@ -1,5 +1,11 @@
 # Validación de Ratchet Rust
 
+## Ensayo de cuotas paralelas — 2026-10-15
+
+Resultado: no se adopta el candidato por falta de ganancia consistente. Tres pares de cargas, más diagnósticos con 32 y uno en vuelo: 34.000 mensajes medidos recuperados sin pérdidas ni duplicados. El candidato pasó 57 pruebas Rust y 35 contratos; el runtime conservado quedó restaurado a fuente/WASM original, con 54 pruebas Rust y 35 contratos aprobados. La prueba CUSTOMER nueva verifica el presupuesto compartido HTTP/WSS, rechazo del mensaje 101, reintento duplicado, secuencia y sync exactos.
+
+Staging conservado validado con 30 mensajes, recuperación, reconexión, revocación y consola owner. No se desplegó el candidato. Se documenta la variación de la tercera ronda sin excluirla ni atribuir causa; el emulador simula las cuotas mediante SQLite y sus tiempos no se extrapolan a la API cacheada de Cloudflare. [Ensayo, datos y parche](QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md).
+
 ## Diagnóstico por etapas — 2026-10-15
 
 Comprobadas dos rondas de las cuatro cargas, un caso detallado con 32 en vuelo, control sin diagnóstico y el mismo caso con uno en vuelo: 13.000 mensajes recuperados, sin pérdidas, duplicados ni desorden; 1.200 muestras emparejadas con su ACK y ningún residuo inferior a -1 ms. Regresión habitual con diagnóstico apagado: 34/34 contratos (63,376 s), 54 pruebas Rust, parser 4/4, formato, Clippy nativo/WASM y build aprobados. El diagnóstico no se habilitó ni desplegó en staging.

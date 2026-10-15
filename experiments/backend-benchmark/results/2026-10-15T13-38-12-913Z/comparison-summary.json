@@ -1,0 +1,3345 @@
+{
+  "input": "C:\\Users\\Shisetsu\\Documents\\Codex\\2026-09-06\\audit-exclusivamente-el-repositorio-local-ratchet\\work\\Ratchet-Rust\\experiments\\backend-benchmark\\results\\2026-10-15T13-38-12-913Z",
+  "diagnostic": {
+    "sequential": {
+      "count": 100,
+      "phases_ms": {
+        "attachment_claim": {
+          "count": 100,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "authorize": {
+          "count": 100,
+          "mean_ms": 0.02,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "batch_staging_wait": {
+          "count": 100,
+          "mean_ms": 1.52,
+          "p50_ms": 2,
+          "p95_ms": 3,
+          "p99_ms": 3,
+          "max_ms": 3
+        },
+        "frame_decode": {
+          "count": 100,
+          "mean_ms": 0.02,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "lookup": {
+          "count": 100,
+          "mean_ms": 0.05,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "postcommit_wait": {
+          "count": 100,
+          "mean_ms": 16.67,
+          "p50_ms": 20,
+          "p95_ms": 27,
+          "p99_ms": 28,
+          "max_ms": 28
+        },
+        "preparation_window_wait": {
+          "count": 100,
+          "mean_ms": 0.01,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 1
+        },
+        "prepare_validate_crypto": {
+          "count": 100,
+          "mean_ms": 0.09,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_enumerate_sockets": {
+          "count": 100,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_event_build": {
+          "count": 100,
+          "mean_ms": 0.09,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_event_serialize": {
+          "count": 100,
+          "mean_ms": 0.17,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_peer_authorize": {
+          "count": 100,
+          "mean_ms": 0.06,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_peer_decode": {
+          "count": 100,
+          "mean_ms": 0.05,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_push_schedule": {
+          "count": 100,
+          "mean_ms": 0.01,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 1
+        },
+        "publish_total": {
+          "count": 100,
+          "mean_ms": 0.44,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_wasm_js_send": {
+          "count": 100,
+          "mean_ms": 0.03,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "quota_customer_burst_io": {
+          "count": 100,
+          "mean_ms": 29.29,
+          "p50_ms": 31,
+          "p95_ms": 34,
+          "p99_ms": 34,
+          "max_ms": 34
+        },
+        "quota_customer_sustained_io": {
+          "count": 100,
+          "mean_ms": 30.63,
+          "p50_ms": 33,
+          "p95_ms": 35,
+          "p99_ms": 42,
+          "max_ms": 44
+        },
+        "quota_device_io": {
+          "count": 100,
+          "mean_ms": 36.6,
+          "p50_ms": 38,
+          "p95_ms": 44,
+          "p99_ms": 44,
+          "max_ms": 44
+        },
+        "quota_io": {
+          "count": 100,
+          "mean_ms": 96.52,
+          "p50_ms": 101,
+          "p95_ms": 107,
+          "p99_ms": 108,
+          "max_ms": 111
+        },
+        "ready_queue_wait": {
+          "count": 100,
+          "mean_ms": 8.76,
+          "p50_ms": 5,
+          "p95_ms": 16,
+          "p99_ms": 23,
+          "max_ms": 23
+        },
+        "sqlite_commit": {
+          "count": 100,
+          "mean_ms": 0.18,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        }
+      },
+      "total_ms": {
+        "count": 100,
+        "mean_ms": 124.3,
+        "p50_ms": 136,
+        "p95_ms": 144,
+        "p99_ms": 156,
+        "max_ms": 157
+      },
+      "external_ack_ms": {
+        "count": 100,
+        "mean_ms": 190.7982810000002,
+        "p50_ms": 196.96129999999994,
+        "p95_ms": 210.48649999999998,
+        "p99_ms": 239.4967999999999,
+        "max_ms": 260.21039999999994
+      },
+      "external_ack_residual_ms": {
+        "count": 100,
+        "mean_ms": 66.49828100000008,
+        "p50_ms": 64.98669999999947,
+        "p95_ms": 90.94180000000051,
+        "p99_ms": 119.4967999999999,
+        "max_ms": 140.21039999999994
+      },
+      "residual_below_tolerance_count": 0,
+      "batches": {
+        "count": 97,
+        "batch_size": {
+          "count": 97,
+          "mean": 10.309278350515465,
+          "p50": 15,
+          "p95": 16,
+          "p99": 16,
+          "max": 16
+        },
+        "phases_ms": {
+          "commit_lane_wait": {
+            "count": 97,
+            "mean_ms": 0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+            "max_ms": 0
+          },
+          "durable_sync": {
+            "count": 97,
+            "mean_ms": 8.030927835051546,
+            "p50_ms": 4,
+            "p95_ms": 19,
+            "p99_ms": 22,
+            "max_ms": 22
+          },
+          "projection": {
+            "count": 97,
+            "mean_ms": 0.010309278350515464,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 1,
+            "max_ms": 1
+          },
+          "publication_barrier": {
+            "count": 97,
+            "mean_ms": 8.051546391752577,
+            "p50_ms": 4,
+            "p95_ms": 19,
+            "p99_ms": 22,
+            "max_ms": 22
+          }
+        },
+        "scope_note": "Case chat IDs only; batch records can include warmup or unsampled jobs sharing a sampled batch. Batch phase durations are shared and must not be added to message timings.",
+        "samples": [
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 1,
+              "projection": 0,
+              "publication_barrier": 1
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 6,
+              "projection": 0,
+              "publication_barrier": 6
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 1,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 21,
+              "projection": 0,
+              "publication_barrier": 21
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 22,
+              "projection": 0,
+              "publication_barrier": 22
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 7,
+              "projection": 0,
+              "publication_barrier": 7
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 22,
+              "projection": 0,
+              "publication_barrier": 22
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 6,
+              "projection": 0,
+              "publication_barrier": 6
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 6,
+              "projection": 0,
+              "publication_barrier": 6
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 21,
+              "projection": 0,
+              "publication_barrier": 21
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 1,
+              "projection": 0,
+              "publication_barrier": 1
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 5,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "8668e38b-2e8a-42cf-b48e-5eac3009b3b7",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 11,
+              "projection": 0,
+              "publication_barrier": 11
+            }
+          }
+        ]
+      }
+    },
+    "rust": {
+      "count": 100,
+      "phases_ms": {
+        "attachment_claim": {
+          "count": 100,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "authorize": {
+          "count": 100,
+          "mean_ms": 0.01,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 1
+        },
+        "batch_staging_wait": {
+          "count": 100,
+          "mean_ms": 1.63,
+          "p50_ms": 2,
+          "p95_ms": 4,
+          "p99_ms": 4,
+          "max_ms": 5
+        },
+        "frame_decode": {
+          "count": 100,
+          "mean_ms": 0.02,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "lookup": {
+          "count": 100,
+          "mean_ms": 0.04,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "postcommit_wait": {
+          "count": 100,
+          "mean_ms": 15.73,
+          "p50_ms": 12,
+          "p95_ms": 27,
+          "p99_ms": 28,
+          "max_ms": 28
+        },
+        "preparation_window_wait": {
+          "count": 100,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "prepare_validate_crypto": {
+          "count": 100,
+          "mean_ms": 0.06,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_enumerate_sockets": {
+          "count": 100,
+          "mean_ms": 0.02,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_event_build": {
+          "count": 100,
+          "mean_ms": 0.08,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_event_serialize": {
+          "count": 100,
+          "mean_ms": 0.06,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_peer_authorize": {
+          "count": 100,
+          "mean_ms": 0.06,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_peer_decode": {
+          "count": 100,
+          "mean_ms": 0.09,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_push_schedule": {
+          "count": 100,
+          "mean_ms": 0.02,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_total": {
+          "count": 100,
+          "mean_ms": 0.52,
+          "p50_ms": 1,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_wasm_js_send": {
+          "count": 100,
+          "mean_ms": 0.1,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "quota_customer_burst_io": {
+          "count": 100,
+          "mean_ms": 57.51,
+          "p50_ms": 59,
+          "p95_ms": 67,
+          "p99_ms": 68,
+          "max_ms": 68
+        },
+        "quota_customer_sustained_io": {
+          "count": 100,
+          "mean_ms": 57.5,
+          "p50_ms": 59,
+          "p95_ms": 67,
+          "p99_ms": 68,
+          "max_ms": 68
+        },
+        "quota_device_io": {
+          "count": 100,
+          "mean_ms": 32.92,
+          "p50_ms": 35,
+          "p95_ms": 37,
+          "p99_ms": 38,
+          "max_ms": 38
+        },
+        "quota_io": {
+          "count": 100,
+          "mean_ms": 90.44,
+          "p50_ms": 94,
+          "p95_ms": 101,
+          "p99_ms": 102,
+          "max_ms": 103
+        },
+        "ready_queue_wait": {
+          "count": 100,
+          "mean_ms": 9.09,
+          "p50_ms": 4,
+          "p95_ms": 20,
+          "p99_ms": 20,
+          "max_ms": 20
+        },
+        "sqlite_commit": {
+          "count": 100,
+          "mean_ms": 0.22,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        }
+      },
+      "total_ms": {
+        "count": 100,
+        "mean_ms": 117.78,
+        "p50_ms": 115,
+        "p95_ms": 140,
+        "p99_ms": 141,
+        "max_ms": 141
+      },
+      "external_ack_ms": {
+        "count": 100,
+        "mean_ms": 179.89880299999996,
+        "p50_ms": 184.51760000000013,
+        "p95_ms": 200.47810000000027,
+        "p99_ms": 227.72779999999966,
+        "max_ms": 232.46849999999995
+      },
+      "external_ack_residual_ms": {
+        "count": 100,
+        "mean_ms": 62.118803000000064,
+        "p50_ms": 62.60199999999986,
+        "p95_ms": 86.51400000000012,
+        "p99_ms": 116.72779999999966,
+        "max_ms": 124.46849999999995
+      },
+      "residual_below_tolerance_count": 0,
+      "batches": {
+        "count": 96,
+        "batch_size": {
+          "count": 96,
+          "mean": 10.416666666666666,
+          "p50": 15,
+          "p95": 16,
+          "p99": 16,
+          "max": 16
+        },
+        "phases_ms": {
+          "commit_lane_wait": {
+            "count": 96,
+            "mean_ms": 0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+            "max_ms": 0
+          },
+          "durable_sync": {
+            "count": 96,
+            "mean_ms": 9.010416666666666,
+            "p50_ms": 4,
+            "p95_ms": 23,
+            "p99_ms": 37,
+            "max_ms": 37
+          },
+          "projection": {
+            "count": 96,
+            "mean_ms": 0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+            "max_ms": 0
+          },
+          "publication_barrier": {
+            "count": 96,
+            "mean_ms": 9.03125,
+            "p50_ms": 4,
+            "p95_ms": 23,
+            "p99_ms": 37,
+            "max_ms": 37
+          }
+        },
+        "scope_note": "Case chat IDs only; batch records can include warmup or unsampled jobs sharing a sampled batch. Batch phase durations are shared and must not be added to message timings.",
+        "samples": [
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 0,
+              "projection": 0,
+              "publication_barrier": 0
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 6,
+              "projection": 0,
+              "publication_barrier": 6
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 6,
+              "projection": 0,
+              "publication_barrier": 6
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 10,
+              "projection": 0,
+              "publication_barrier": 10
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 32,
+              "projection": 0,
+              "publication_barrier": 32
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 20,
+              "projection": 0,
+              "publication_barrier": 20
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 9,
+              "projection": 0,
+              "publication_barrier": 9
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 18,
+              "projection": 0,
+              "publication_barrier": 18
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 23,
+              "projection": 0,
+              "publication_barrier": 23
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 32,
+              "projection": 0,
+              "publication_barrier": 32
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 19,
+              "projection": 0,
+              "publication_barrier": 19
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 37,
+              "projection": 0,
+              "publication_barrier": 37
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 15,
+              "projection": 0,
+              "publication_barrier": 15
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 17,
+              "projection": 0,
+              "publication_barrier": 17
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 31,
+              "projection": 0,
+              "publication_barrier": 31
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 5,
+              "projection": 0,
+              "publication_barrier": 5
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 16,
+              "projection": 0,
+              "publication_barrier": 16
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 16,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 15,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 22,
+              "projection": 0,
+              "publication_barrier": 22
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "91383470-0e56-44c2-a2a7-9a9dca4f1922",
+            "batch_size": 6,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          }
+        ]
+      }
+    }
+  },
+  "validation": "All 24 primary case results passed; three matched pairs per case; full recovery, no lost or duplicate messages, matching ACK counts and workload dimensions.",
+  "artifacts": {
+    "sequential": {
+      "directory": "C:\\Users\\Shisetsu\\Documents\\Codex\\2026-09-06\\audit-exclusivamente-el-repositorio-local-ratchet\\work\\Ratchet-Rust\\.wrangler\\quota-sequential",
+      "commit": "07fd1bdae694ce61ff790883a52f50766fe12f6e",
+      "wasm_sha256": "f2fab22521d85be0cc9d7c1ae0c7d74a3c4bd59bbc9dcf4cd6e12c26d7e15c5d",
+      "entry_sha256": "bf2344cb050f1d47f7cf67e3bd3c97bae70037e47a47fd20525af56e612ce77c",
+      "rust_source_files": {
+        "core/src/error.rs": "277a6143048716ebcd58be541d28c3178e9cacf47e1eb67ee56b61c0f45a33b6",
+        "core/src/http_security.rs": "ea0af1034de80d6b4c51857f59a55749da40b94c4044ba58e9239c3c9b27393f",
+        "core/src/lane.rs": "8ba2979e46344a8640a68a144e5f26ae64e9649dadb0db4a8c7f63641f4ded14",
+        "core/src/lib.rs": "f1e7a67b1a5f117933fbcbaf3cb767fd865f5c1769d6f23ff5fd5ec217b3de6f",
+        "core/src/message.rs": "e0e203833d6ef270f670cfc7c5e4958979269de03280586b0fe89c0fabd203c2",
+        "core/src/password.rs": "64063e527b14e372307a2bd500a17df8eb52b4c9e87d963ddf7fa79f67548ace",
+        "core/src/policy.rs": "b148d8f40f7b66dc6848547f5f0633c5ae6448b66745ed9922c93a96c03afb7c",
+        "core/src/ready_batch.rs": "79f410f2b4ae681d6f5fed7c2ae3d37bf4be923f5743458497020f0564758acc",
+        "core/src/receipt.rs": "6834ed07b60cc6d3886de08b0fb9037ea186a3dffaf7d1b0d8e201d56cca16ad",
+        "core/src/signatures.rs": "f82f158009c798e495400c3c9f527682f4e2966f88bc445c0f519c5091d89f58",
+        "core/src/storage_crypto.rs": "ca94b69a3a79bb4b53893b1d8e5c184c37a8237ef4aa88ea00684ec2d8dd211a",
+        "worker/src/admin.rs": "4de660b9cf8f314c1e0e89e6f1e66876802fb8327fa1679b6821c3639d41e386",
+        "worker/src/admin/customers.rs": "6327960326e6fd29abc58c7c6bad758efd8495acc2b293c06a7bf86260fbbcb7",
+        "worker/src/admin/invitations.rs": "a6ca6c9038d9a68ad056cbb83202b0ba57c461e760bb7f72d2de1f7fcdf40ea2",
+        "worker/src/admin/operators.rs": "cc258d32453a9c77cc37520a0facf7346678cfcb260bafefc67afd65bc6e0de2",
+        "worker/src/auth.rs": "346b1e0952f1948928d98501017f4211c274a63d29c7826f671475e00c8fa85b",
+        "worker/src/bootstrap.rs": "d5ecf903e092d97892452249c796ff7bdc6057130f53c5774b6b4b025294b3fc",
+        "worker/src/chat/authority.rs": "8c0317bcf9ecf9381e992394af5a328d5fac3539e5c76a7d322ce6041d7cc83c",
+        "worker/src/chat/control.rs": "ffa216470ed5e4dbc9b12fdd7fda3e2652ed67e5aef30a8f3703020969889e9c",
+        "worker/src/chat/fence.sql": "50486d3a3cb353bfc106995e9253dd33b897bc1603e627a0136a074e81ef803b",
+        "worker/src/chat/list.sql": "e3a84cb6711e26c6fdc7779b5ab7f95f78a022523a719a8e93c4360dc1f923e5",
+        "worker/src/chat/metadata.rs": "2e677ec2e012b1db9b395a80bb9a76640ce45a97dd938e73d054c19bea786f62",
+        "worker/src/chat/mod.rs": "9acd43b81556e4571d44369a54fe4107a49b9ebf4eba97b1c19d465c52ed9340",
+        "worker/src/chat/routes.rs": "e0b9f15c89deb110264325447a7fca6adb495d136bf27d971de944b67e9161b4",
+        "worker/src/chat/send.rs": "49b839321a06f76b199cdef32fd155ce657027d7f69331b488b6ab3eed78dea4",
+        "worker/src/chat/storage.rs": "78330acd4e0cebd2262e7dfcfa2bdc31e7740ef270bd06814d5afeef209631fc",
+        "worker/src/chat/timing.rs": "b752a23d6f6c95833e7b2a4a1a2e4d5fb336143b1c8b0a1bae2706674dddee8d",
+        "worker/src/db.rs": "879ddabfd3d9e66c57abaec5f56f6055f8e3527cbed135e7315e89ddb79c91e4",
+        "worker/src/files.rs": "5a3017a5f609fbf3ac686dd1c31413afbeb7af47a1213375767b70affcd3fa1f",
+        "worker/src/files/attachments.rs": "be715a2d9fdf612c9978904aedddf649c1f1cf19494f3e499edfbd73c58d5231",
+        "worker/src/files/push.rs": "ef2b2c7cdcf55d2398ba040a566b847f039f021258310761b3afdec20cd46acb",
+        "worker/src/files/wallpaper.rs": "3f516a8f19af12cdb75386c7fc83d3bc54ce455b2c0600c992e2e285d62f6b8f",
+        "worker/src/http.rs": "c77c0a983d0e7439d9af5d863b3a3ac71ed2d3f8b2ced181d7423691423308bc",
+        "worker/src/identity.rs": "04e5a0c7e2b723219bae73efa5f851dd44db8ac9c6a5b599d0e4fd2b8a0c346b",
+        "worker/src/identity/activation.rs": "52b697ce7c1f2fca03d9db3ff4e4ec766b416a34dc3ecf81a4ca99d8bd6c49d7",
+        "worker/src/identity/passkeys.rs": "1fbda249d899219e04149f6385066c1f662582b3a50133309027b7e5443ef288",
+        "worker/src/identity/prekeys.rs": "6c1c0fa65dbafeccc968c1b3b9a9cd95095ea098416025ee449a0c244b946f1d",
+        "worker/src/lib.rs": "2ef3be42e99db09bcba227fe9495157bc60e9f5bdcc726d2984b39079a22ef4e",
+        "worker/src/owner.rs": "393b5d672323c733992daa78afb200f3fce422c616800083d651e870f0ef2e70",
+        "worker/src/password.rs": "db7b8ca340080ad9823b507a295905e566c6a31ce9c2b8384a3856e51436ba6c",
+        "worker/src/portable.rs": "28b8e6fddb0abb95cceb2175cf5c5e4541b0ececb560abaf98e7846ea55331bc",
+        "worker/src/provisioning.rs": "b34804ae9caddb4ce46d7b44ae6e20a4655a69bc11027a8997bd1fa2601398c5"
+      },
+      "rust_source_sha256": "1cc99ef38d8b5b42fdc04acd0c6964305ee7df1e4ca34a82f6f0bdd6ab5e1d07"
+    },
+    "rust": {
+      "commit": "07fd1bdae694ce61ff790883a52f50766fe12f6e",
+      "wasm_sha256": "de8f143cf48bf3644f59696bf7a5bedfcfc4dc2bfae2d1595e1251c6672c2b7d",
+      "entry_sha256": "bf2344cb050f1d47f7cf67e3bd3c97bae70037e47a47fd20525af56e612ce77c",
+      "rust_source_files": {
+        "core/src/error.rs": "277a6143048716ebcd58be541d28c3178e9cacf47e1eb67ee56b61c0f45a33b6",
+        "core/src/http_security.rs": "ea0af1034de80d6b4c51857f59a55749da40b94c4044ba58e9239c3c9b27393f",
+        "core/src/lane.rs": "8ba2979e46344a8640a68a144e5f26ae64e9649dadb0db4a8c7f63641f4ded14",
+        "core/src/lib.rs": "f1e7a67b1a5f117933fbcbaf3cb767fd865f5c1769d6f23ff5fd5ec217b3de6f",
+        "core/src/message.rs": "e0e203833d6ef270f670cfc7c5e4958979269de03280586b0fe89c0fabd203c2",
+        "core/src/password.rs": "64063e527b14e372307a2bd500a17df8eb52b4c9e87d963ddf7fa79f67548ace",
+        "core/src/policy.rs": "b148d8f40f7b66dc6848547f5f0633c5ae6448b66745ed9922c93a96c03afb7c",
+        "core/src/ready_batch.rs": "79f410f2b4ae681d6f5fed7c2ae3d37bf4be923f5743458497020f0564758acc",
+        "core/src/receipt.rs": "6834ed07b60cc6d3886de08b0fb9037ea186a3dffaf7d1b0d8e201d56cca16ad",
+        "core/src/signatures.rs": "f82f158009c798e495400c3c9f527682f4e2966f88bc445c0f519c5091d89f58",
+        "core/src/storage_crypto.rs": "ca94b69a3a79bb4b53893b1d8e5c184c37a8237ef4aa88ea00684ec2d8dd211a",
+        "worker/src/admin.rs": "4de660b9cf8f314c1e0e89e6f1e66876802fb8327fa1679b6821c3639d41e386",
+        "worker/src/admin/customers.rs": "6327960326e6fd29abc58c7c6bad758efd8495acc2b293c06a7bf86260fbbcb7",
+        "worker/src/admin/invitations.rs": "a6ca6c9038d9a68ad056cbb83202b0ba57c461e760bb7f72d2de1f7fcdf40ea2",
+        "worker/src/admin/operators.rs": "cc258d32453a9c77cc37520a0facf7346678cfcb260bafefc67afd65bc6e0de2",
+        "worker/src/auth.rs": "346b1e0952f1948928d98501017f4211c274a63d29c7826f671475e00c8fa85b",
+        "worker/src/bootstrap.rs": "d5ecf903e092d97892452249c796ff7bdc6057130f53c5774b6b4b025294b3fc",
+        "worker/src/chat/authority.rs": "8c0317bcf9ecf9381e992394af5a328d5fac3539e5c76a7d322ce6041d7cc83c",
+        "worker/src/chat/control.rs": "ffa216470ed5e4dbc9b12fdd7fda3e2652ed67e5aef30a8f3703020969889e9c",
+        "worker/src/chat/fence.sql": "50486d3a3cb353bfc106995e9253dd33b897bc1603e627a0136a074e81ef803b",
+        "worker/src/chat/list.sql": "e3a84cb6711e26c6fdc7779b5ab7f95f78a022523a719a8e93c4360dc1f923e5",
+        "worker/src/chat/metadata.rs": "2e677ec2e012b1db9b395a80bb9a76640ce45a97dd938e73d054c19bea786f62",
+        "worker/src/chat/mod.rs": "28f031723b71af07aabf5deb2cfbdb44dbd6ddc023df1d53c6b20921aa24c112",
+        "worker/src/chat/quota.rs": "23d87eb09e88f5087088aee560b193f6b7e4f32b2c0e0f4b360bd45ef986e8b7",
+        "worker/src/chat/routes.rs": "e0b9f15c89deb110264325447a7fca6adb495d136bf27d971de944b67e9161b4",
+        "worker/src/chat/send.rs": "49b839321a06f76b199cdef32fd155ce657027d7f69331b488b6ab3eed78dea4",
+        "worker/src/chat/storage.rs": "78330acd4e0cebd2262e7dfcfa2bdc31e7740ef270bd06814d5afeef209631fc",
+        "worker/src/chat/timing.rs": "b752a23d6f6c95833e7b2a4a1a2e4d5fb336143b1c8b0a1bae2706674dddee8d",
+        "worker/src/db.rs": "879ddabfd3d9e66c57abaec5f56f6055f8e3527cbed135e7315e89ddb79c91e4",
+        "worker/src/files.rs": "5a3017a5f609fbf3ac686dd1c31413afbeb7af47a1213375767b70affcd3fa1f",
+        "worker/src/files/attachments.rs": "be715a2d9fdf612c9978904aedddf649c1f1cf19494f3e499edfbd73c58d5231",
+        "worker/src/files/push.rs": "ef2b2c7cdcf55d2398ba040a566b847f039f021258310761b3afdec20cd46acb",
+        "worker/src/files/wallpaper.rs": "3f516a8f19af12cdb75386c7fc83d3bc54ce455b2c0600c992e2e285d62f6b8f",
+        "worker/src/http.rs": "c77c0a983d0e7439d9af5d863b3a3ac71ed2d3f8b2ced181d7423691423308bc",
+        "worker/src/identity.rs": "04e5a0c7e2b723219bae73efa5f851dd44db8ac9c6a5b599d0e4fd2b8a0c346b",
+        "worker/src/identity/activation.rs": "52b697ce7c1f2fca03d9db3ff4e4ec766b416a34dc3ecf81a4ca99d8bd6c49d7",
+        "worker/src/identity/passkeys.rs": "1fbda249d899219e04149f6385066c1f662582b3a50133309027b7e5443ef288",
+        "worker/src/identity/prekeys.rs": "6c1c0fa65dbafeccc968c1b3b9a9cd95095ea098416025ee449a0c244b946f1d",
+        "worker/src/lib.rs": "2ef3be42e99db09bcba227fe9495157bc60e9f5bdcc726d2984b39079a22ef4e",
+        "worker/src/owner.rs": "393b5d672323c733992daa78afb200f3fce422c616800083d651e870f0ef2e70",
+        "worker/src/password.rs": "db7b8ca340080ad9823b507a295905e566c6a31ce9c2b8384a3856e51436ba6c",
+        "worker/src/portable.rs": "28b8e6fddb0abb95cceb2175cf5c5e4541b0ececb560abaf98e7846ea55331bc",
+        "worker/src/provisioning.rs": "b34804ae9caddb4ce46d7b44ae6e20a4655a69bc11027a8997bd1fa2601398c5"
+      },
+      "rust_source_sha256": "8ec2660c06f1c81f5849eca1308a6d191c2424afdde2062a144a0aa531f283ed"
+    }
+  },
+  "load_generator": [
+    {
+      "round": 1,
+      "variant": "sequential",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1796,
+          "event_loop_p99_ms": 20.4,
+          "event_loop_max_ms": 23.87
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 359,
+          "event_loop_p99_ms": 21.97,
+          "event_loop_max_ms": 24.07
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 6062,
+          "event_loop_p99_ms": 23.13,
+          "event_loop_max_ms": 25.38
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 1828,
+          "event_loop_p99_ms": 24.66,
+          "event_loop_max_ms": 25.05
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "variant": "rust",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1530,
+          "event_loop_p99_ms": 22.18,
+          "event_loop_max_ms": 24.69
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 171,
+          "event_loop_p99_ms": 21.71,
+          "event_loop_max_ms": 22.46
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 6453,
+          "event_loop_p99_ms": 22.17,
+          "event_loop_max_ms": 25.67
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 2141,
+          "event_loop_p99_ms": 22.02,
+          "event_loop_max_ms": 26.21
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "variant": "rust",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1578,
+          "event_loop_p99_ms": 21.95,
+          "event_loop_max_ms": 25.59
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 360,
+          "event_loop_p99_ms": 21.87,
+          "event_loop_max_ms": 22.66
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 6485,
+          "event_loop_p99_ms": 22.45,
+          "event_loop_max_ms": 25.54
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 2095,
+          "event_loop_p99_ms": 21.82,
+          "event_loop_max_ms": 25.28
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "variant": "sequential",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1562,
+          "event_loop_p99_ms": 22.54,
+          "event_loop_max_ms": 23.74
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 437,
+          "event_loop_p99_ms": 21.74,
+          "event_loop_max_ms": 23.66
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 6610,
+          "event_loop_p99_ms": 21.46,
+          "event_loop_max_ms": 26.33
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 1875,
+          "event_loop_p99_ms": 24.2,
+          "event_loop_max_ms": 25.17
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "variant": "sequential",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1422,
+          "event_loop_p99_ms": 23.82,
+          "event_loop_max_ms": 25.35
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 360,
+          "event_loop_p99_ms": 22.2,
+          "event_loop_max_ms": 22.76
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 6750,
+          "event_loop_p99_ms": 22.94,
+          "event_loop_max_ms": 25.25
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 1938,
+          "event_loop_p99_ms": 24,
+          "event_loop_max_ms": 25.58
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "variant": "rust",
+      "cases": [
+        {
+          "name": "1000-one-chat-256B",
+          "cpu_ms": 1703,
+          "event_loop_p99_ms": 23.33,
+          "event_loop_max_ms": 24.69
+        },
+        {
+          "name": "1000-twenty-chats-256B",
+          "cpu_ms": 500,
+          "event_loop_p99_ms": 21.14,
+          "event_loop_max_ms": 22.92
+        },
+        {
+          "name": "2000-one-chat-256B",
+          "cpu_ms": 7000,
+          "event_loop_p99_ms": 21.91,
+          "event_loop_max_ms": 25.13
+        },
+        {
+          "name": "1000-one-chat-4KiB",
+          "cpu_ms": 2532,
+          "event_loop_p99_ms": 21.22,
+          "event_loop_max_ms": 24.76
+        }
+      ]
+    }
+  ],
+  "metric_note": "Improvement is (sequential mean - rust mean) / sequential mean; positive favors current Rust. ACK figures summarize each run equally. Three local pairs do not establish statistical significance.",
+  "cases": [
+    {
+      "name": "1000-one-chat-256B",
+      "total_recovered": {
+        "sequential": 3000,
+        "rust": 3000
+      },
+      "metrics": {
+        "elapsed_ms": {
+          "sequential_mean": 5685.95,
+          "rust_mean": 5792.693333333333,
+          "sequential_median": 5724.2,
+          "rust_median": 5546.57,
+          "sequential_range": [
+            5572.08,
+            5761.57
+          ],
+          "rust_range": [
+            5446.3,
+            6385.21
+          ],
+          "improvement_percent": -1.877317481394189,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 5572.08,
+              "rust": 5446.3,
+              "improvement_percent": 2.257325810110403
+            },
+            {
+              "round": 2,
+              "sequential": 5761.57,
+              "rust": 5546.57,
+              "improvement_percent": 3.7316217628181207
+            },
+            {
+              "round": 3,
+              "sequential": 5724.2,
+              "rust": 6385.21,
+              "improvement_percent": -11.547639844869156
+            }
+          ]
+        },
+        "ack_p95_ms": {
+          "sequential_mean": 207.72966666666676,
+          "rust_mean": 202.53933333333325,
+          "sequential_median": 207.54950000000008,
+          "rust_median": 200.25700000000006,
+          "sequential_range": [
+            197.2394000000004,
+            218.40009999999984
+          ],
+          "rust_range": [
+            193.5737999999999,
+            213.78719999999976
+          ],
+          "improvement_percent": 2.4985999431954884,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 197.2394000000004,
+              "rust": 193.5737999999999,
+              "improvement_percent": 1.8584522159368198
+            },
+            {
+              "round": 2,
+              "sequential": 218.40009999999984,
+              "rust": 200.25700000000006,
+              "improvement_percent": 8.30727641608213
+            },
+            {
+              "round": 3,
+              "sequential": 207.54950000000008,
+              "rust": 213.78719999999976,
+              "improvement_percent": -3.005403530242026
+            }
+          ]
+        },
+        "ack_mean_ms": {
+          "sequential_mean": 179.84333333333333,
+          "rust_mean": 183.61666666666665,
+          "sequential_median": 180.94,
+          "rust_median": 175.73,
+          "sequential_range": [
+            176.48,
+            182.11
+          ],
+          "rust_range": [
+            172.69,
+            202.43
+          ],
+          "improvement_percent": -2.098122439901384,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 176.48,
+              "rust": 172.69,
+              "improvement_percent": 2.147552130553033
+            },
+            {
+              "round": 2,
+              "sequential": 182.11,
+              "rust": 175.73,
+              "improvement_percent": 3.503377079786955
+            },
+            {
+              "round": 3,
+              "sequential": 180.94,
+              "rust": 202.43,
+              "improvement_percent": -11.876865259201951
+            }
+          ]
+        },
+        "server_cpu_ms": {
+          "sequential_mean": 5473.963333333333,
+          "rust_mean": 5286.46,
+          "sequential_median": 5390.63,
+          "rust_median": 5312.5,
+          "sequential_range": [
+            5328.13,
+            5703.13
+          ],
+          "rust_range": [
+            5156.25,
+            5390.63
+          ],
+          "improvement_percent": 3.425366994907403,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 5328.13,
+              "rust": 5312.5,
+              "improvement_percent": 0.2933486983238042
+            },
+            {
+              "round": 2,
+              "sequential": 5703.13,
+              "rust": 5156.25,
+              "improvement_percent": 9.589120360223248
+            },
+            {
+              "round": 3,
+              "sequential": 5390.63,
+              "rust": 5390.63,
+              "improvement_percent": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "1000-twenty-chats-256B",
+      "total_recovered": {
+        "sequential": 3000,
+        "rust": 3000
+      },
+      "metrics": {
+        "elapsed_ms": {
+          "sequential_mean": 5865.759999999999,
+          "rust_mean": 8267.453333333333,
+          "sequential_median": 5944.48,
+          "rust_median": 5735.19,
+          "sequential_range": [
+            5650.48,
+            6002.32
+          ],
+          "rust_range": [
+            5563.77,
+            13503.4
+          ],
+          "improvement_percent": -40.94428229817336,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 5650.48,
+              "rust": 5563.77,
+              "improvement_percent": 1.5345598957964481
+            },
+            {
+              "round": 2,
+              "sequential": 5944.48,
+              "rust": 5735.19,
+              "improvement_percent": 3.520745296476731
+            },
+            {
+              "round": 3,
+              "sequential": 6002.32,
+              "rust": 13503.4,
+              "improvement_percent": -124.96967839102213
+            }
+          ]
+        },
+        "ack_p95_ms": {
+          "sequential_mean": 258.0734666666667,
+          "rust_mean": 383.3902333333329,
+          "sequential_median": 267.45650000000023,
+          "rust_median": 239.97299999999996,
+          "sequential_range": [
+            238.10319999999956,
+            268.66070000000036
+          ],
+          "rust_range": [
+            239.96129999999903,
+            670.2363999999998
+          ],
+          "improvement_percent": -48.55856291050952,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 238.10319999999956,
+              "rust": 239.97299999999996,
+              "improvement_percent": -0.785289739911265
+            },
+            {
+              "round": 2,
+              "sequential": 267.45650000000023,
+              "rust": 239.96129999999903,
+              "improvement_percent": 10.280251181033618
+            },
+            {
+              "round": 3,
+              "sequential": 268.66070000000036,
+              "rust": 670.2363999999998,
+              "improvement_percent": -149.47318308930144
+            }
+          ]
+        },
+        "ack_mean_ms": {
+          "sequential_mean": 185.36333333333334,
+          "rust_mean": 260.3566666666666,
+          "sequential_median": 188.48,
+          "rust_median": 181,
+          "sequential_range": [
+            177.37,
+            190.24
+          ],
+          "rust_range": [
+            174.05,
+            426.02
+          ],
+          "improvement_percent": -40.457479904332004,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 177.37,
+              "rust": 174.05,
+              "improvement_percent": 1.8717934261712765
+            },
+            {
+              "round": 2,
+              "sequential": 188.48,
+              "rust": 181,
+              "improvement_percent": 3.968590831918501
+            },
+            {
+              "round": 3,
+              "sequential": 190.24,
+              "rust": 426.02,
+              "improvement_percent": -123.9381833473507
+            }
+          ]
+        },
+        "server_cpu_ms": {
+          "sequential_mean": 4583.336666666667,
+          "rust_mean": 4479.166666666667,
+          "sequential_median": 4640.63,
+          "rust_median": 4343.75,
+          "sequential_range": [
+            4406.25,
+            4703.13
+          ],
+          "rust_range": [
+            4250,
+            4843.75
+          ],
+          "improvement_percent": 2.272798347055749,
+          "rust_faster_pairs": 2,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 4640.63,
+              "rust": 4250,
+              "improvement_percent": 8.417607092140509
+            },
+            {
+              "round": 2,
+              "sequential": 4703.13,
+              "rust": 4343.75,
+              "improvement_percent": 7.641294201946365
+            },
+            {
+              "round": 3,
+              "sequential": 4406.25,
+              "rust": 4843.75,
+              "improvement_percent": -9.929078014184398
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2000-one-chat-256B",
+      "total_recovered": {
+        "sequential": 6000,
+        "rust": 6000
+      },
+      "metrics": {
+        "elapsed_ms": {
+          "sequential_mean": 15504.113333333333,
+          "rust_mean": 19440.31,
+          "sequential_median": 15683.29,
+          "rust_median": 15547.99,
+          "sequential_range": [
+            14923.71,
+            15905.34
+          ],
+          "rust_range": [
+            15052.81,
+            27720.13
+          ],
+          "improvement_percent": -25.388079808498144,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 14923.71,
+              "rust": 15547.99,
+              "improvement_percent": -4.183142127527275
+            },
+            {
+              "round": 2,
+              "sequential": 15683.29,
+              "rust": 15052.81,
+              "improvement_percent": 4.020074869494866
+            },
+            {
+              "round": 3,
+              "sequential": 15905.34,
+              "rust": 27720.13,
+              "improvement_percent": -74.28190783724209
+            }
+          ]
+        },
+        "ack_p95_ms": {
+          "sequential_mean": 300.4980666666682,
+          "rust_mean": 376.64326666666847,
+          "sequential_median": 301.370600000002,
+          "rust_median": 310.34850000000006,
+          "sequential_range": [
+            288.4373000000014,
+            311.6863000000012
+          ],
+          "rust_range": [
+            292.91040000000066,
+            526.6709000000046
+          ],
+          "improvement_percent": -25.339663860288802,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 288.4373000000014,
+              "rust": 310.34850000000006,
+              "improvement_percent": -7.596520977002121
+            },
+            {
+              "round": 2,
+              "sequential": 301.370600000002,
+              "rust": 292.91040000000066,
+              "improvement_percent": 2.807241316837573
+            },
+            {
+              "round": 3,
+              "sequential": 311.6863000000012,
+              "rust": 526.6709000000046,
+              "improvement_percent": -68.97467100735662
+            }
+          ]
+        },
+        "ack_mean_ms": {
+          "sequential_mean": 246.69666666666663,
+          "rust_mean": 309.08,
+          "sequential_median": 249.51,
+          "rust_median": 247.28,
+          "sequential_range": [
+            237.42,
+            253.16
+          ],
+          "rust_range": [
+            239.58,
+            440.38
+          ],
+          "improvement_percent": -25.28746503803593,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 237.42,
+              "rust": 247.28,
+              "improvement_percent": -4.1529778451689054
+            },
+            {
+              "round": 2,
+              "sequential": 249.51,
+              "rust": 239.58,
+              "improvement_percent": 3.979800408801242
+            },
+            {
+              "round": 3,
+              "sequential": 253.16,
+              "rust": 440.38,
+              "improvement_percent": -73.95323115816085
+            }
+          ]
+        },
+        "server_cpu_ms": {
+          "sequential_mean": 16562.50333333333,
+          "rust_mean": 16906.253333333334,
+          "sequential_median": 16359.38,
+          "rust_median": 17015.63,
+          "sequential_range": [
+            16343.75,
+            16984.38
+          ],
+          "rust_range": [
+            16671.88,
+            17031.25
+          ],
+          "improvement_percent": -2.075471280408318,
+          "rust_faster_pairs": 0,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 16343.75,
+              "rust": 17015.63,
+              "improvement_percent": -4.110929254302109
+            },
+            {
+              "round": 2,
+              "sequential": 16359.38,
+              "rust": 16671.88,
+              "improvement_percent": -1.9102190914325718
+            },
+            {
+              "round": 3,
+              "sequential": 16984.38,
+              "rust": 17031.25,
+              "improvement_percent": -0.27595944037991954
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "1000-one-chat-4KiB",
+      "total_recovered": {
+        "sequential": 3000,
+        "rust": 3000
+      },
+      "metrics": {
+        "elapsed_ms": {
+          "sequential_mean": 6287.793333333334,
+          "rust_mean": 8374.93,
+          "sequential_median": 6301.56,
+          "rust_median": 6339.47,
+          "sequential_range": [
+            6151.51,
+            6410.31
+          ],
+          "rust_range": [
+            5981.8,
+            12803.52
+          ],
+          "improvement_percent": -33.19346797869734,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 6151.51,
+              "rust": 5981.8,
+              "improvement_percent": 2.7588348226695563
+            },
+            {
+              "round": 2,
+              "sequential": 6301.56,
+              "rust": 6339.47,
+              "improvement_percent": -0.6015970648537798
+            },
+            {
+              "round": 3,
+              "sequential": 6410.31,
+              "rust": 12803.52,
+              "improvement_percent": -99.73324223009496
+            }
+          ]
+        },
+        "ack_p95_ms": {
+          "sequential_mean": 240.35976666666588,
+          "rust_mean": 332.2414000000038,
+          "sequential_median": 236.4585999999981,
+          "rust_median": 244.2983000000022,
+          "sequential_range": [
+            231.68619999999646,
+            252.93450000000303
+          ],
+          "rust_range": [
+            235.91940000000614,
+            516.5065000000031
+          ],
+          "improvement_percent": -38.22671098726793,
+          "rust_faster_pairs": 0,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 231.68619999999646,
+              "rust": 235.91940000000614,
+              "improvement_percent": -1.8271265185452301
+            },
+            {
+              "round": 2,
+              "sequential": 236.4585999999981,
+              "rust": 244.2983000000022,
+              "improvement_percent": -3.3154641023858504
+            },
+            {
+              "round": 3,
+              "sequential": 252.93450000000303,
+              "rust": 516.5065000000031,
+              "improvement_percent": -104.20563426499625
+            }
+          ]
+        },
+        "ack_mean_ms": {
+          "sequential_mean": 198.98333333333335,
+          "rust_mean": 265.3433333333333,
+          "sequential_median": 199.47,
+          "rust_median": 201.06,
+          "sequential_range": [
+            194.22,
+            203.26
+          ],
+          "rust_range": [
+            189.72,
+            405.25
+          ],
+          "improvement_percent": -33.349526761035236,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 194.22,
+              "rust": 189.72,
+              "improvement_percent": 2.3169601482854496
+            },
+            {
+              "round": 2,
+              "sequential": 199.47,
+              "rust": 201.06,
+              "improvement_percent": -0.7971123477214636
+            },
+            {
+              "round": 3,
+              "sequential": 203.26,
+              "rust": 405.25,
+              "improvement_percent": -99.37518449276789
+            }
+          ]
+        },
+        "server_cpu_ms": {
+          "sequential_mean": 6026.046666666666,
+          "rust_mean": 6171.88,
+          "sequential_median": 5984.38,
+          "rust_median": 6234.38,
+          "sequential_range": [
+            5921.88,
+            6171.88
+          ],
+          "rust_range": [
+            6046.88,
+            6234.38
+          ],
+          "improvement_percent": -2.4200498502611545,
+          "rust_faster_pairs": 1,
+          "pairs": [
+            {
+              "round": 1,
+              "sequential": 6171.88,
+              "rust": 6046.88,
+              "improvement_percent": 2.0253148149348332
+            },
+            {
+              "round": 2,
+              "sequential": 5984.38,
+              "rust": 6234.38,
+              "improvement_percent": -4.1775422015313195
+            },
+            {
+              "round": 3,
+              "sequential": 5921.88,
+              "rust": 6234.38,
+              "improvement_percent": -5.277040399332645
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

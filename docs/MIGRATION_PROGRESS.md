@@ -112,4 +112,6 @@ La entrega física de push y campañas adicionales de fallos de infraestructura 
 
 ## Diagnóstico por etapas — 2026-10-15
 
+Seguimiento: el ensayo posterior de cuotas paralelas recuperó 34.000 mensajes y pasó su regresión, pero no justificó la adopción por falta de ganancia consistente. Se conservó/restauró el runtime secuencial y se guardó el candidato como parche. Staging conservado validado; ninguna publicación del candidato. [Datos y decisión](QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md).
+
 Muestreo local de 1/10 mensajes y fases por lote, apagado por defecto; 13.000 mensajes recuperados y 1.200 muestras correlacionadas con su ACK. En el caso detallado de 1.000 mensajes: cuotas 93,00 ms y ACK 186,53 ms con 32 en vuelo; cuotas 3,90 ms y ACK 11,40 ms con uno. Preparación/cifrado y commit SQLite bajo 1 ms de media, con resolución de reloj de 1 ms. No confundir duración de await con CPU: incluye espera de servicio y reanudación del runtime. Las cuotas del cliente están secuenciadas en Rust y paralelizadas en la referencia; queda como candidato para un ensayo separado, sin cambiar ni retirar validaciones en este trabajo. Contratos 34/34 y Rust 54/54 aprobados; diagnóstico no desplegado en staging. [Informe, alcance y datos](LATENCY_BREAKDOWN_2026-10-15.md).

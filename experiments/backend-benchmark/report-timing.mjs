@@ -35,6 +35,7 @@ const f=(n,d=2)=>n.toFixed(d);
 const link=run=>`[${relative(process.cwd(),run.path).replaceAll('\\','/')}](../${relative(process.cwd(),join(run.path,'metadata.json')).replaceAll('\\','/')})`;
 const lines=[
 '# Desglose local de latencia Rust — 2026-10-15','',
+'Nota posterior: el [ensayo de cuotas paralelas](QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md) no demostró una ganancia consistente y no se incorporó al runtime. Miniflare simula las cuotas mediante SQLite; estas esperas no describen el costo de la API cacheada real. Se conservan los datos del artefacto secuencial como historial.','',
 'Las esperas de las cuotas dominan el tiempo dentro del handler durante estas cargas. No son tiempo de cifrado ni de escritura SQLite, y tampoco equivalen a CPU consumida por el limitador: cada await incluye espera en el runtime y trabajo de otros mensajes.','',
 '## Dos rondas de las cuatro cargas','',
 'Muestreo determinista de uno de cada diez mensajes por remitente, excluido el calentamiento. Medias de las mismas muestras emparejadas con su ACK; milisegundos por mensaje. Las columnas no incluyen todas las fases pequeñas.','',

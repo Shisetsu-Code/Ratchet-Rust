@@ -1,5 +1,7 @@
 # Desglose local de latencia Rust — 2026-10-15
 
+Nota posterior: el [ensayo de cuotas paralelas](QUOTA_PARALLEL_EXPERIMENT_2026-10-15.md) no demostró una ganancia consistente y no se incorporó al runtime. Se comprobó además que Miniflare simula las cuotas mediante SQLite; estas esperas no describen el costo de la API real, que usa contadores cacheados. Los datos siguientes identifican el artefacto secuencial medido y se conservan como historial.
+
 Las esperas de las cuotas dominan el tiempo dentro del handler durante estas cargas. No son tiempo de cifrado ni de escritura SQLite, y tampoco equivalen a CPU consumida por el limitador: cada await incluye espera en el runtime y trabajo de otros mensajes.
 
 ## Dos rondas de las cuatro cargas
