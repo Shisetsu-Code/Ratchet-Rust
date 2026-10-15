@@ -1,0 +1,456 @@
+{
+  "metadata": {
+    "date": "2026-10-15T12:22:46.217Z",
+    "method": "Paired local workerd runs; same machine, runtime, compatibility date, limits, payload, WebSocket clients and verifier. Synthetic isolated state; no deployments.",
+    "rounds": 3,
+    "smoke": false,
+    "node": "v26.8.1",
+    "wrangler": "4.151.0",
+    "workerd": "1.20261012.1",
+    "compatibility_date": "2026-10-15",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor              ",
+    "logical_cpus": 12,
+    "total_memory_bytes": 34281136128,
+    "rust_commit": "fab45b78dff6388c2c0b61264883cef5510af2d4",
+    "rust_wasm_sha256": "ec71db36ddc8e8a306a7fff591e46d8801ea5a1e30737690663dda5ac0ede327",
+    "typescript_head": "76754e0d059ed8fc8c03ed978ac39aca3bb2a98c",
+    "typescript_working_tree_matches_migration_baseline": true,
+    "typescript_backend_source_sha256": "66b6e3ed682de33b3d88bdba6ee5d93baa6d3cbea1b1a1d910160d1271932d40",
+    "typescript_changed_since_baseline": [],
+    "limits_note": "Production message quotas preserved. Only WS connection admission is raised identically to 1000/min for fixture setup. No quota or authorization bypass in application code.",
+    "measurement": "Warm connections and one warmup per writer; prebuilt equal-sized frames; queue-to-durable-ACK and queue-to-recipient WS arrival, not DOM. CPU: workerd process tree before/after measured sends. Peak RSS is process lifetime peak, not per-case allocation.",
+    "max_global_inflight": 32,
+    "queue_accounting": "All messages offered at t0; identical global sliding ACK window. Both wire RTT and full offered-to-completion/client-queue distributions recorded."
+  },
+  "rows": [
+    {
+      "scenario": "1000-one-chat-256B",
+      "typescript": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 5289.94,
+          "min": 5101.68,
+          "max": 5303.52,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 189.04,
+          "min": 188.55,
+          "max": 196.01,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 166.84,
+          "min": 161.43,
+          "max": 167.6,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 189.91859999999997,
+          "min": 181.03319999999985,
+          "max": 202.13720000000012,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 5021.7932,
+          "min": 4857.4703,
+          "max": 5029.7169,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 4750,
+          "min": 4734.38,
+          "max": 4812.5,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 400478208,
+          "min": 398512128,
+          "max": 402669568,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 12501.04,
+          "min": 12364.43,
+          "max": 14583.14,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 79.99,
+          "min": 68.57,
+          "max": 80.88,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 392.58,
+          "min": 387.57,
+          "max": 460.24,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 516.7554,
+          "min": 516.1797999999999,
+          "max": 756.1818000000003,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 11737.900000000001,
+          "min": 11691.719799999999,
+          "max": 13921.1997,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 12093.75,
+          "min": 11984.38,
+          "max": 12375,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 462852096,
+          "min": 462249984,
+          "max": 465584128,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust_duration_ratio": 2.3631723611231887,
+      "rust_throughput_delta_percent": -57.686203977994076
+    },
+    {
+      "scenario": "1000-twenty-chats-256B",
+      "typescript": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 5175.99,
+          "min": 4958.05,
+          "max": 5182.46,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 193.2,
+          "min": 192.96,
+          "max": 201.69,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 163.9,
+          "min": 156.87,
+          "max": 164.18,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 190.573699999999,
+          "min": 175.13739999999962,
+          "max": 214.4377000000004,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 4938.752,
+          "min": 4726.290700000001,
+          "max": 4943.209699999999,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 3875,
+          "min": 3687.5,
+          "max": 3921.88,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 615243776,
+          "min": 612687872,
+          "max": 618487808,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 6616.9,
+          "min": 6565.88,
+          "max": 6667.79,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 151.13,
+          "min": 149.97,
+          "max": 152.3,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 209.34,
+          "min": 206.98,
+          "max": 210.57,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 284.3002000000015,
+          "min": 276.04109999999855,
+          "max": 293.24779999999737,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 6334.964899999999,
+          "min": 6287.447,
+          "max": 6384.253400000001,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 5171.88,
+          "min": 5140.63,
+          "max": 5390.63,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 642052096,
+          "min": 639369216,
+          "max": 650678272,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust_duration_ratio": 1.278383459009774,
+      "rust_throughput_delta_percent": -21.775362318840575
+    },
+    {
+      "scenario": "2000-one-chat-256B",
+      "typescript": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 14947.31,
+          "min": 14764.55,
+          "max": 15055.75,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 133.8,
+          "min": 132.84,
+          "max": 135.46,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 237.53,
+          "min": 234.63,
+          "max": 239.57,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 316.89840000000186,
+          "min": 301.66209999999774,
+          "max": 317.6287000000011,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 14239.731,
+          "min": 14118.981800000001,
+          "max": 14410.817499999997,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 16359.38,
+          "min": 16156.25,
+          "max": 16781.25,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 777105408,
+          "min": 771432448,
+          "max": 780640256,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 6000,
+        "out_of_order_rooms": 0
+      },
+      "rust": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 46678.72,
+          "min": 42887.54,
+          "max": 56797.77,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 42.85,
+          "min": 35.21,
+          "max": 46.63,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 740.55,
+          "min": 679.88,
+          "max": 902.53,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 1270.3231000000014,
+          "min": 1033.0343999999968,
+          "max": 1575.2402999999904,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 44427.543099999995,
+          "min": 40667.7236,
+          "max": 54649.0477,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 42156.25,
+          "min": 41406.25,
+          "max": 43140.63,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 856449024,
+          "min": 834813952,
+          "max": 857546752,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 6000,
+        "out_of_order_rooms": 0
+      },
+      "rust_duration_ratio": 3.1228843183154695,
+      "rust_throughput_delta_percent": -67.9745889387145
+    },
+    {
+      "scenario": "1000-one-chat-4KiB",
+      "typescript": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 6080.97,
+          "min": 6054.8,
+          "max": 6224.33,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 164.45,
+          "min": 160.66,
+          "max": 165.16,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 192.16,
+          "min": 192.08,
+          "max": 197.12,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 230.85680000000139,
+          "min": 228.29000000000087,
+          "max": 237.62320000000182,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 5805.429600000003,
+          "min": 5797.933399999994,
+          "max": 5953.523399999998,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 5812.5,
+          "min": 5796.88,
+          "max": 5843.75,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 811003904,
+          "min": 806113280,
+          "max": 811118592,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust": {
+        "runs": 3,
+        "passed": 3,
+        "failures": [],
+        "duration_ms": {
+          "median": 13426.17,
+          "min": 12750.6,
+          "max": 13897.96,
+          "n": 3
+        },
+        "messages_s": {
+          "median": 74.48,
+          "min": 71.95,
+          "max": 78.43,
+          "n": 3
+        },
+        "ack_mean_ms": {
+          "median": 421.79,
+          "min": 399.6,
+          "max": 436.98,
+          "n": 3
+        },
+        "ack_p95_ms": {
+          "median": 581.4906000000046,
+          "min": 540.0576000000001,
+          "max": 678.2488000000012,
+          "n": 3
+        },
+        "offered_ack_p95_ms": {
+          "median": 12686.743999999992,
+          "min": 12019.699900000007,
+          "max": 13186.690399999992,
+          "n": 3
+        },
+        "server_cpu_ms": {
+          "median": 12750,
+          "min": 12078.13,
+          "max": 13109.38,
+          "n": 3
+        },
+        "server_rss_end_bytes": {
+          "median": 840986624,
+          "min": 833384448,
+          "max": 852557824,
+          "n": 3
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 3000,
+        "out_of_order_rooms": 0
+      },
+      "rust_duration_ratio": 2.2078993976289967,
+      "rust_throughput_delta_percent": -54.709638187899046
+    }
+  ],
+  "run_errors": []
+}

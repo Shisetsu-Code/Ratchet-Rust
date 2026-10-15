@@ -1,5 +1,7 @@
 # Validación de Ratchet Rust
 
+Actualización de rendimiento: la [comparación local contra TypeScript](BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md) completó 24 casos, tres rondas por versión y 30.000 mensajes medidos/recuperados. El Rust actual resultó más lento en los cuatro escenarios. Esto identifica una regresión de rendimiento del port, además de las reservas operativas documentadas debajo; no se debe confundir la aprobación de contratos con una mejora de capacidad.
+
 Cierre de implementación y pruebas del 2026-10-15. Las 74 rutas activas están implementadas en Rust y comprobadas localmente; staging independiente desplegado y recorrido funcional remoto aprobado. Implementación publicada y verificada en GitHub: `72a40707384a09bd82421ba3484c0a03fe9f1c90`.
 
 ## Rutas y contratos

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "smoke30",
+    "status": "passed",
+    "users": 1,
+    "rooms": 1,
+    "per_user": 30,
+    "text_bytes": 256,
+    "messages": 30,
+    "fanout_sockets_per_room": 2,
+    "elapsed_ms": 156.34,
+    "throughput_messages_s": 191.89,
+    "ack": {
+      "count": 30,
+      "mean_ms": 103.6,
+      "p50_ms": 112.03340000000003,
+      "p95_ms": 146.88520000000017,
+      "p99_ms": 148.75209999999993,
+      "max_ms": 148.75209999999993
+    },
+    "recipient_arrival": {
+      "count": 30,
+      "mean_ms": 103.63,
+      "p50_ms": 112.07150000000001,
+      "p95_ms": 146.8963000000001,
+      "p99_ms": 148.73219999999992,
+      "max_ms": 148.73219999999992
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 30,
+    "recovery_pages": 1,
+    "recovery_ms": 114.39,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 125,
+      "rss_end_bytes": 211300352,
+      "process_peak_rss_bytes": 211300352
+    },
+    "load_generator": {
+      "cpu_ms": 0,
+      "event_loop_p99_ms": 20.02,
+      "event_loop_max_ms": 20.02
+    }
+  }
+]

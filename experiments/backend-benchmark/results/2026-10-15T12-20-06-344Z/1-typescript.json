@@ -1,0 +1,106 @@
+[
+  {
+    "name": "1000-one-chat-256B",
+    "status": "failed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "error": "SEND_QUEUE_FULL, SEND_QUEUE_FULL, SEND_QUEUE_FULL, SEND_QUEUE_FULL, SEND_QUEUE_FULL\n\n11 !== 0\n",
+    "acks": 1,
+    "received": 1,
+    "nacks": [
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL"
+    ],
+    "closed": []
+  },
+  {
+    "name": "1000-twenty-chats-256B",
+    "status": "passed",
+    "users": 20,
+    "rooms": 20,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 1000,
+    "fanout_sockets_per_room": 2,
+    "elapsed_ms": 4364.43,
+    "throughput_messages_s": 229.13,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 2694.55,
+      "p50_ms": 2771.7135,
+      "p95_ms": 4264.2033,
+      "p99_ms": 4356.8617,
+      "max_ms": 4358.0954
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 2694.61,
+      "p50_ms": 2771.768,
+      "p95_ms": 4264.2625,
+      "p99_ms": 4356.920300000001,
+      "max_ms": 4358.1626
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 20,
+    "recovery_ms": 962.39,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 4109.38,
+      "rss_end_bytes": 560312320,
+      "process_peak_rss_bytes": 611782656
+    },
+    "load_generator": {
+      "cpu_ms": 296,
+      "event_loop_p99_ms": 21.82,
+      "event_loop_max_ms": 22.45
+    }
+  },
+  {
+    "name": "2000-one-chat-256B",
+    "status": "failed",
+    "users": 40,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "error": "SEND_QUEUE_FULL, SEND_QUEUE_FULL\n\n2 !== 0\n",
+    "acks": 1,
+    "received": 1,
+    "nacks": [
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL"
+    ],
+    "closed": []
+  },
+  {
+    "name": "1000-one-chat-4KiB",
+    "status": "failed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 4096,
+    "error": "SEND_QUEUE_FULL, SEND_QUEUE_FULL, SEND_QUEUE_FULL, SEND_QUEUE_FULL\n\n4 !== 0\n",
+    "acks": 1,
+    "received": 1,
+    "nacks": [
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL",
+      "SEND_QUEUE_FULL"
+    ],
+    "closed": []
+  }
+]

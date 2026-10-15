@@ -1,0 +1,182 @@
+[
+  {
+    "name": "1000-one-chat-256B",
+    "status": "passed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 1000,
+    "fanout_sockets_per_room": 21,
+    "elapsed_ms": 9933.79,
+    "throughput_messages_s": 100.67,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 5175.32,
+      "p50_ms": 5191.746,
+      "p95_ms": 9458.213500000002,
+      "p99_ms": 9830.2443,
+      "max_ms": 9923.478
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 5174.76,
+      "p50_ms": 5191.1981,
+      "p95_ms": 9457.7376,
+      "p99_ms": 9829.739899999999,
+      "max_ms": 9923.0676
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 6,
+    "recovery_ms": 263.9,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 10750,
+      "rss_end_bytes": 498716672,
+      "process_peak_rss_bytes": 548245504
+    },
+    "load_generator": {
+      "cpu_ms": 2031,
+      "event_loop_p99_ms": 17.55,
+      "event_loop_max_ms": 23.25
+    }
+  },
+  {
+    "name": "1000-twenty-chats-256B",
+    "status": "passed",
+    "users": 20,
+    "rooms": 20,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 1000,
+    "fanout_sockets_per_room": 2,
+    "elapsed_ms": 5118.98,
+    "throughput_messages_s": 195.35,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 2723.22,
+      "p50_ms": 2723.0991000000013,
+      "p95_ms": 4920.126799999998,
+      "p99_ms": 5099.4353999999985,
+      "max_ms": 5099.744599999998
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 2713.96,
+      "p50_ms": 2710.5712000000003,
+      "p95_ms": 4910.505799999999,
+      "p99_ms": 5092.729800000001,
+      "max_ms": 5093.955099999999
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 20,
+    "recovery_ms": 735.84,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 4656.25,
+      "rss_end_bytes": 689430528,
+      "process_peak_rss_bytes": 739745792
+    },
+    "load_generator": {
+      "cpu_ms": 359,
+      "event_loop_p99_ms": 23.35,
+      "event_loop_max_ms": 24.71
+    }
+  },
+  {
+    "name": "2000-one-chat-256B",
+    "status": "passed",
+    "users": 40,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 2000,
+    "fanout_sockets_per_room": 41,
+    "elapsed_ms": 30038.25,
+    "throughput_messages_s": 66.58,
+    "ack": {
+      "count": 2000,
+      "mean_ms": 15477.4,
+      "p50_ms": 15502.123200000002,
+      "p95_ms": 28479.058399999998,
+      "p99_ms": 29685.1458,
+      "max_ms": 30019.057399999998
+    },
+    "recipient_arrival": {
+      "count": 2000,
+      "mean_ms": 15476.66,
+      "p50_ms": 15501.201200000003,
+      "p95_ms": 28478.3933,
+      "p99_ms": 29684.454400000002,
+      "max_ms": 30018.471599999997
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 2000,
+    "recovery_pages": 11,
+    "recovery_ms": 720.45,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 32656.25,
+      "rss_end_bytes": 1013960704,
+      "process_peak_rss_bytes": 1037012992
+    },
+    "load_generator": {
+      "cpu_ms": 8094,
+      "event_loop_p99_ms": 18.68,
+      "event_loop_max_ms": 25.49
+    }
+  },
+  {
+    "name": "1000-one-chat-4KiB",
+    "status": "passed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 4096,
+    "messages": 1000,
+    "fanout_sockets_per_room": 21,
+    "elapsed_ms": 10605.57,
+    "throughput_messages_s": 94.29,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 5594.68,
+      "p50_ms": 5687.2119999999995,
+      "p95_ms": 10093.5962,
+      "p99_ms": 10501.0268,
+      "max_ms": 10596.615900000004
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 5594.13,
+      "p50_ms": 5686.733499999995,
+      "p95_ms": 10092.984299999996,
+      "p99_ms": 10500.510699999992,
+      "max_ms": 10596.209600000002
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 6,
+    "recovery_ms": 505.22,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 11125,
+      "rss_end_bytes": 966447104,
+      "process_peak_rss_bytes": 1037070336
+    },
+    "load_generator": {
+      "cpu_ms": 1890,
+      "event_loop_p99_ms": 17.37,
+      "event_loop_max_ms": 22.64
+    }
+  }
+]

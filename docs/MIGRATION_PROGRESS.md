@@ -1,5 +1,13 @@
 # Migration ledger — plan: docs/superpowers/plans/2026-10-15-ratchet-rust.md
 
+## Benchmark comparativo posterior — 2026-10-15
+
+- Misma PC/workerd/compatibilidad, datos nuevos por versión y tres rondas pareadas; 24 casos de alta carga y 30.000 mensajes medidos, confirmados y recuperados exactamente una vez.
+- Medianas de tiempo del lote TS → Rust: 1.000/1 chat/256 B: 5,29 → 12,50 s; 1.000/20 chats: 5,18 → 6,62 s; 2.000/1 chat: 14,95 → 46,68 s; 1.000/1 chat/4 KiB: 6,08 → 13,43 s. Rust no mejoró rendimiento en este port.
+- La comparación usa la misma ventana de 32 envíos en vuelo. El ensayo separado sin ventana recibió SEND_QUEUE_FULL de TS (capacidad 64); Rust aceptó el lote. No se mezclan rechazos con throughput de éxito.
+- Diferencias encontradas: caché Map de permisos y preparación superpuesta/lotes en TS; consultas SQLite por destinatario y preparación serializada en Rust. Falta aislar cuánto cuesta cada diferencia; este benchmark no modifica el producto.
+- Informe, generador, huellas, condiciones, CPU y JSON originales en docs/BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md y experiments/backend-benchmark/. No hubo despliegues ni instalaciones.
+
 - Base: especificación `00d6ffb`; origen local Ratchet-SQLite con cambios sin commit.
 - Ruling: ejecución directa y continua, sin otro gate humano, por instrucción explícita del usuario del 2026-10-15.
 - Pre-flight: Task 1 contratos → Tasks 2–7; Task 2 dominio → Tasks 3–6; Task 3 auth/DB → Tasks 4–6; Task 4 chat → Tasks 5–7. Interfaces coherentes.

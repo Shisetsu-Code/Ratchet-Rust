@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-15T12:18:57.788Z",
+  "method": "Paired local workerd runs; same machine, runtime, compatibility date, limits, payload, WebSocket clients and verifier. Synthetic isolated state; no deployments.",
+  "rounds": 1,
+  "smoke": true,
+  "node": "v26.8.1",
+  "wrangler": "4.151.0",
+  "workerd": "1.20261012.1",
+  "compatibility_date": "2026-10-15",
+  "cpu": "AMD Ryzen 5 3600 6-Core Processor              ",
+  "logical_cpus": 12,
+  "total_memory_bytes": 34281136128,
+  "rust_commit": "fab45b78dff6388c2c0b61264883cef5510af2d4",
+  "rust_wasm_sha256": "ec71db36ddc8e8a306a7fff591e46d8801ea5a1e30737690663dda5ac0ede327",
+  "typescript_head": "76754e0d059ed8fc8c03ed978ac39aca3bb2a98c",
+  "typescript_working_tree_matches_migration_baseline": true,
+  "typescript_backend_source_sha256": "66b6e3ed682de33b3d88bdba6ee5d93baa6d3cbea1b1a1d910160d1271932d40",
+  "typescript_changed_since_baseline": [],
+  "limits_note": "Production message quotas preserved. Only WS connection admission is raised identically to 1000/min for fixture setup. No quota or authorization bypass in application code.",
+  "measurement": "Warm connections and one warmup per writer; prebuilt equal-sized frames; queue-to-durable-ACK and queue-to-recipient WS arrival, not DOM. CPU: workerd process tree before/after measured sends. Peak RSS is process lifetime peak, not per-case allocation."
+}

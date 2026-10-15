@@ -1,5 +1,7 @@
 # Ratchet Rust
 
+Benchmark local de alta carga: este port Rust tardó entre 1,28 y 3,12 veces lo de la versión TypeScript de referencia. Tres rondas pareadas, 24 casos y 30.000 mensajes recuperados. Ver [comparación y datos reproducibles](docs/BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md); la paridad funcional no implica paridad de rendimiento.
+
 Backend de Ratchet en Rust/WASM para Cloudflare Workers, con interfaz React y API desde el mismo origen. La migración implementa las 74 rutas activas de Ratchet-SQLite y está desplegada en un staging nuevo e independiente. No utiliza un backend TypeScript de respaldo.
 
 72 rutas tienen handlers operativos y las dos rutas de inscripción de passkeys conservan el HTTP 410 `ACCESS_PASSKEY_ENROLLMENT_DISABLED` intencional de la referencia. El login y reauth con passkeys existentes están implementados. La matriz de las 74 rutas tiene evidencia local y referencias a código y pruebas.
