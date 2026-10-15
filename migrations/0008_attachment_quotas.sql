@@ -1,2 +1,0 @@
-CREATE INDEX idx_attachment_uploads_owner_active
-ON attachment_uploads(owner_user_id,status,expires_at);

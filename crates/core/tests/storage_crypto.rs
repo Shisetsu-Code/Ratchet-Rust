@@ -46,7 +46,7 @@ fn matches_web_crypto_ciphertext_fingerprint_and_decryption() {
 }
 
 #[test]
-fn rejects_tampering_wrong_chat_wrong_key_and_invalid_utf8() {
+fn rejects_tampering_wrong_chat_and_wrong_key() {
     let v = vector();
     let master: [u8; 32] = decode(&v.master).try_into().unwrap_or_default();
     let nonce: [u8; 12] = decode(&v.nonce).try_into().unwrap_or_default();

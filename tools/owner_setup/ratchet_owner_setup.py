@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -46,7 +45,7 @@ except ImportError:
     raise SystemExit(2)
 
 
-DEFAULT_URL = "https://ratchet-secure-support-beta.braian-n-l.workers.dev"
+DEFAULT_URL = "http://localhost:8787"
 KDF_ITERATIONS = 600_000
 MAX_RESPONSE_BYTES = 65_536
 MAX_KEY_FILE_BYTES = 65_536
@@ -97,34 +96,8 @@ def key_filename(login_name: str, fallback: str) -> str:
 
 
 def read_saved_token() -> str:
-    restart_core = Path.home() / "Documents" / "Codex" / "Ratchet-Restart" / "restart_core.py"
-    if sys.platform == "win32" and restart_core.is_file():
-        try:
-            spec = importlib.util.spec_from_file_location("ratchet_restart_core", restart_core)
-            if spec is not None and spec.loader is not None:
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[spec.name] = module
-                spec.loader.exec_module(module)
-                value = str(module.load_token_dpapi()).strip()
-                if re.fullmatch(r"[0-9a-f]{64}", value):
-                    return value
-        except Exception:  # noqa: BLE001 - optional local integration; manual entry remains available
-            pass
-
-    value = os.environ.get("RATCHET_BETA_BOOTSTRAP_TOKEN", "").strip()
-    if re.fullmatch(r"[0-9a-f]{64}", value):
-        return value
-    if sys.platform == "win32":
-        try:
-            import winreg
-
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as key:
-                stored, _ = winreg.QueryValueEx(key, "RATCHET_BETA_BOOTSTRAP_TOKEN")
-            value = str(stored).strip()
-            return value if re.fullmatch(r"[0-9a-f]{64}", value) else ""
-        except (FileNotFoundError, OSError):
-            return ""
-    return ""
+    """Rust installation only: never import credentials from another deployment."""
+    return os.environ.get("RATCHET_RUST_BOOTSTRAP_TOKEN", "").strip()
 
 
 def create_key_document(password: str) -> tuple[dict[str, object], Ed25519PrivateKey]:

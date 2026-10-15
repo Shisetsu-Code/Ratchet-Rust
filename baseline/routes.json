@@ -5,7 +5,7 @@
     "source": "src/worker/index.ts",
     "line": 56,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "GET",
@@ -13,7 +13,7 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 17,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "POST",
@@ -21,7 +21,7 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 23,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "POST",
@@ -29,7 +29,7 @@
     "source": "src/worker/bootstrap/routes.ts",
     "line": 33,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "POST",
@@ -85,7 +85,7 @@
     "source": "src/worker/auth/routes.ts",
     "line": 61,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "POST",
@@ -149,7 +149,7 @@
     "source": "src/worker/auth/routes.ts",
     "line": 163,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "POST",
@@ -229,7 +229,7 @@
     "source": "src/worker/auth/session-routes.ts",
     "line": 12,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "PATCH",
@@ -245,7 +245,7 @@
     "source": "src/worker/auth/session-routes.ts",
     "line": 43,
     "shadowed": false,
-    "implementation": "pending"
+    "implementation": "ported-runtime-unverified"
   },
   {
     "method": "DELETE",

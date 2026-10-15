@@ -70,9 +70,19 @@ export async function captureBaseline(source, output) {
       const data = await readFile(join(source, path));
       files.push({ path, sha256: createHash('sha256').update(data).digest('hex'), bytes: data.length });
       if (path.startsWith('src/worker/')) { workerSources.set(path, data.toString('utf8')); continue; }
+      // Historical migrations are provenance only; Rust starts with its own consolidated schema.
+      if (path.startsWith('migrations/')) continue;
+      // The Rust console has its own launcher and must not restore old deployment defaults.
+      if (path.startsWith('tools/owner_setup/')) continue;
       await mkdir(dirname(join(output, path)), { recursive: true });
       await copyFile(join(source, path), join(output, path));
     }
+  }
+  for (const path of ['index.html', 'tsconfig.json', 'tsconfig.client.json']) {
+    let data;
+    try { data=await readFile(join(source,path)); } catch(error) {if(error.code==='ENOENT')continue;throw error;}
+    files.push({path,sha256:createHash('sha256').update(data).digest('hex'),bytes:data.length});
+    await copyFile(join(source,path),join(output,path));
   }
   await mkdir(join(output, 'baseline'), { recursive: true });
   await writeFile(join(output, 'baseline/source-manifest.json'), JSON.stringify({ format: 1, source: 'Ratchet-SQLite local working tree', files }, null, 2) + '\n');

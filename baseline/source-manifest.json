@@ -1301,6 +1301,21 @@
       "path": "tools/owner_setup/sqlite_admin_setup.py",
       "sha256": "771ebc2bd03a42fc54d0129609ba8a1be944cc1a04f70f2c20e28a4f7e19a1bb",
       "bytes": 1676
+    },
+    {
+      "path": "index.html",
+      "sha256": "fccfb07d0fedb5fcb3a350a2d752fcf2653b2a9e765c88ff86714e33e6788c8a",
+      "bytes": 889
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "9979c686d4f4ef4af012e250578c75eaa6f8e60ae5e6f3780f58a2db5169a267",
+      "bytes": 21
+    },
+    {
+      "path": "tsconfig.client.json",
+      "sha256": "6f787eb10d8a33279f0a042b347e5f4986d91996bac29f1e42ee9f1a11b2b9b9",
+      "bytes": 278
     }
   ]
 }
