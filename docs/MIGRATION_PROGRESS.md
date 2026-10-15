@@ -15,3 +15,19 @@
 - Validación: 22 pruebas Rust + 2 pruebas Node pasadas; `cargo +1.98.1 clippy -p ratchet-core --all-targets --locked --offline -- -D warnings` y equivalente Worker/WASM pasados.
 - Preflight real: faltan Rust 1.99.0 y worker-build 0.8.7; `node scripts/check-toolchain.mjs` devuelve ready=false. Ninguna herramienta global instalada ni actualizada. Detenida la preparación del entorno siguiendo la preferencia explícita del usuario.
 - Próximo paso: validar con toolchain final y empaquetar el Worker parcial para pruebas locales de bootstrap/login; continuar Tasks 3–8. No hay despliegue Rust ni una aplicación completa todavía.
+
+## Continuación tras preparar herramientas — 2026-10-15
+
+- El usuario instaló Rust 1.99.0 y worker-build 0.8.7. Preflight ready=true; empaquetado real completado.
+- Interfaz: dependencias estables actuales fijadas, package-lock generado, build Vite y typecheck correctos. El capturador incluía inicialmente menos extensiones de las necesarias: incorporados JS/MJS, service worker y tsconfig.base.json.
+- Task 3: bootstrap de owner, contraseña y consultas de sesión pasaron en workerd local, incluidos replay, credenciales inválidas, origen ajeno y límites. Aún faltan métodos de llave portable/passkeys y revocación coordinada.
+- Task 4: HTTP/WSS, SQLite con AES-GCM/HKDF/HMAC, ACK después de storage.sync, deduplicación, conflictos, secuencias, sync paginado y recibos probados. Faltan batch HTTP, proyección de estadísticas, integración de claims y coordinación de revocaciones antes de considerarlo completo.
+- Fallo real corregido: respuestas del DO traen cabeceras inmutables; se copian antes de adjuntar cabeceras de seguridad.
+- Fallo real corregido: BLOB de SQLite es ArrayBuffer, no array JS; deserialización binaria explícita.
+- Fallo real corregido: futures Mutex no es FIFO. Sustituido por FifoLane con transferencia de guard por oneshot; 3 pruebas nativas cubren orden, cancelación ya notificada y 1.000 esperas. La espera de durabilidad queda fuera del turno.
+- Empaquetado release: strip=true rompe catch wrappers de wasm-bindgen (workers-rs#1014). strip=debuginfo conserva metadatos y funciona con las versiones estables actuales.
+- Runner Windows: nombres cortos evitan límite de rutas SQLite; cleanup reintenta EBUSY y no modifica secretos si aborta antes de iniciar. Prueba de preservación de archivo pasada.
+- Evidencia actual: 25 pruebas Rust (22 dominio + 3 FIFO), 3 Node, 7 contratos locales pasados; interfaz compila/typecheck. Ráfaga WSS de 30: total 205.3 ms, media individual 108.1 ms, p50 105.7 ms, p95 198.6 ms, máximo 204.2 ms. Datos exclusivamente locales/sintéticos, sin equivalencia todavía con WAN.
+- Siguiente implementación: control de revocación y registro de rooms serializados en un DO de control; registro antes de conceder leases para cubrir rooms nuevas concurrentes. Las revocaciones deben cercar sólo los chats afectados, mutar D1 y renovar/cerrar sockets según la autoridad vigente.
+- Diseño de recuperación del control: journal local + estado D1 de operación PENDING/COMMITTED/ABORTED. Batch D1 verifica PENDING y marca COMMITTED junto con la mutación; recuperación CAS a ABORTED evita que una escritura tardía ocurra después de liberar cercos. No adivinar un commit externo incierto.
+- No desplegar: cliente completo aún no tiene todos los endpoints y todavía no hay control de invalidación conectado a mutaciones públicas.

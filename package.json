@@ -1,0 +1,36 @@
+{
+  "name": "ratchet-rust",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:client": "vite build",
+    "typecheck:client": "tsc -p tsconfig.client.json --noEmit",
+    "test:tooling": "node --test tests/tooling/*.test.mjs",
+    "test:contracts": "node scripts/run-contracts.mjs",
+    "dev:worker": "wrangler dev --config wrangler.local.jsonc --local --port 8797"
+  },
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "@noble/post-quantum": "0.7.1",
+    "@simplewebauthn/browser": "14.0.0",
+    "idb": "8.0.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "wrangler": "4.151.0",
+    "ws": "8.22.0"
+  }
+}

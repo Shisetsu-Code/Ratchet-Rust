@@ -1,6 +1,8 @@
 //! Cloudflare runtime adapter. Domain code lives in ratchet-core.
 mod auth;
 mod bootstrap;
+mod chat;
+pub use chat::ChatRealtime;
 mod db;
 mod http;
 mod password;
@@ -15,6 +17,8 @@ pub async fn main(mut request: Request, env: Env, _ctx: Context) -> Result<Respo
         Ok(r) => r,
         Err(e) => e.response(&id)?,
     };
+    let headers = response.headers().clone();
+    response = response.with_headers(headers);
     http::security_headers(&mut response, &path, &id)?;
     Ok(response)
 }
@@ -22,6 +26,9 @@ pub async fn main(mut request: Request, env: Env, _ctx: Context) -> Result<Respo
 async fn handle(request: &mut Request, env: &Env) -> http::ApiResult<Response> {
     http::same_origin(request, env)?;
     http::network_quota(request, env).await?;
+    if request.path().starts_with("/api/v1/chats/") {
+        return chat::routes::handle(request, env).await;
+    }
     if request.method() == Method::Post {
         match request.path().as_str() {
             "/api/v1/auth/password/login" => return password::login(request, env).await,

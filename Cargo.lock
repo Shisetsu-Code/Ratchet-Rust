@@ -651,6 +651,7 @@ dependencies = [
  "aes-gcm",
  "base64",
  "ed25519-dalek",
+ "futures-channel",
  "hkdf",
  "hmac",
  "pbkdf2",

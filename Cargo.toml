@@ -21,6 +21,7 @@ hkdf = "=0.13.0"
 zeroize = "=1.9.1"
 worker = { version = "=0.8.7", features = ["d1"] }
 futures-util = "=0.3.34"
+futures-channel = "=0.3.34"
 getrandom = { version = "=0.4.3", features = ["wasm_js"] }
 pbkdf2 = { version = "=0.13.0", features = ["hmac"] }
 subtle = "=2.6.1"
@@ -36,7 +37,8 @@ expect_used = "deny"
 
 [profile.release]
 lto = true
-strip = true
+# Keep bindgen's externref metadata; see cloudflare/workers-rs#1014.
+strip = "debuginfo"
 codegen-units = 1
 opt-level = "s"
 

@@ -408,6 +408,11 @@
       "bytes": 2382
     },
     {
+      "path": "src/client/crypto/wasm/generated/ratchet_crypto_wasm.js",
+      "sha256": "c616a172d149ece3e4c798978f1d3f5cf32b05955304551858614ce4aee2e21f",
+      "bytes": 7649
+    },
+    {
       "path": "src/client/crypto/wasm/generated/ratchet_crypto_wasm_bg.wasm",
       "sha256": "65e8d519426f2b7f9087b76fd94bb6f3246af03a716e431348bbd7d07fdcbdad",
       "bytes": 160255
@@ -1133,6 +1138,11 @@
       "bytes": 336
     },
     {
+      "path": "public/sw.js",
+      "sha256": "9021ce7679881e31cb993e9b8e0b87ddbf7455e42b6f49e6e0a453b426085921",
+      "bytes": 3839
+    },
+    {
       "path": "migrations/0001_initial.sql",
       "sha256": "1f586964d44c9225ddbdc4d2de5da012a18421b00ab0bc9771c7bc9e23e7034b",
       "bytes": 9112
@@ -1311,6 +1321,11 @@
       "path": "tsconfig.json",
       "sha256": "9979c686d4f4ef4af012e250578c75eaa6f8e60ae5e6f3780f58a2db5169a267",
       "bytes": 21
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha256": "3124c760b971a614fab71ec5dd31d512e00ef1daeade1e4e36bb5f59379670a6",
+      "bytes": 418
     },
     {
       "path": "tsconfig.client.json",

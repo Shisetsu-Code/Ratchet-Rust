@@ -13,9 +13,10 @@ expone deliberadamente `migration_ready: false`.
 Implementados: validación de mensajes y recibos, reglas de permisos, primitivas
 de almacenamiento cifrado, firmas Ed25519, contraseñas PBKDF2, seguridad HTTP,
 lectura de sesiones, login/reauth por contraseña y bootstrap de owner con firma.
-El dominio tiene pruebas nativas; los handlers requieren todavía pruebas en
-el runtime local. WSS, persistencia del chat, administración completa, adjuntos,
-fondos, push y pruebas de paridad siguen en desarrollo.
+El dominio tiene pruebas nativas y los primeros handlers ya pasaron pruebas en
+workerd local. WSS, SQLite cifrado, deduplicación, sincronización y recibos están
+integrados y probados con 30 mensajes simultáneos. Administración completa,
+revocación coordinada, adjuntos, fondos, push y paridad integral siguen pendientes.
 
 Se iniciará con bases vacías. El esquema nuevo está en
 `db/migrations/0001_ratchet_rust.sql`; se retiraron las 26 migraciones históricas
@@ -51,10 +52,23 @@ cargo clippy -p ratchet-core --all-targets --locked -- -D warnings
 node --test tests/tooling/*.test.mjs
 ```
 
-La primera comprobación de dominio y WASM se hizo con Rust 1.98.1 ya instalado,
-sin instalar toolchains ni herramientas globales. La validación con 1.99.0 y el
-empaquetado local aún están pendientes. Los vectores criptográficos de `baseline/`
-usan exclusivamente llaves sintéticas públicas de prueba.
+La comprobación actual usa Rust 1.99.0 y worker-build 0.8.7, preparados por el
+usuario. Pasaron 25 pruebas Rust, 3 de herramientas Node y 7 contratos en workerd
+local. También compilan la interfaz y sus tipos con las dependencias fijadas.
+Los vectores criptográficos de `baseline/` son sintéticos y públicos.
+
+Para empaquetar y ejecutar contratos locales:
+
+```powershell
+Push-Location crates/worker
+worker-build --release --no-opt
+Pop-Location
+npm run test:contracts
+```
+
+La build conserva metadatos externos de WASM (`strip = "debuginfo"`), necesarios
+por [workers-rs #1014](https://github.com/cloudflare/workers-rs/issues/1014).
+Los contratos crean bases locales efímeras y restauran `.dev.vars` al terminar.
 
 ## Documentación
 

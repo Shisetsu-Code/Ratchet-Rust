@@ -1,6 +1,7 @@
 //! Runtime-independent contracts and invariants shared by HTTP and WebSocket handlers.
 pub mod error;
 pub mod http_security;
+pub mod lane;
 pub mod message;
 pub mod password;
 pub mod policy;

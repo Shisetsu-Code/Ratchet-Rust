@@ -4,7 +4,7 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const roots = ['src/client', 'src/shared', 'src/worker', 'public', 'migrations', 'crypto-wasm', 'tools/owner_setup'];
-const extensions = /\.(?:ts|tsx|css|html|svg|png|webp|gif|ico|wasm|sql|rs|toml|lock|json|py|ps1|md)$/i;
+const extensions = /\.(?:ts|tsx|js|mjs|css|html|svg|png|webp|gif|ico|wasm|sql|rs|toml|lock|json|py|ps1|md)$/i;
 const forbidden = /(?:^|\/)(?:node_modules|target|dist|\.git|\.wrangler|__pycache__)(?:\/|$)|(?:private|secret|password|credential|\.dev\.vars|\.env)(?:\.|$)/i;
 
 async function filesUnder(root, path) {
@@ -78,7 +78,7 @@ export async function captureBaseline(source, output) {
       await copyFile(join(source, path), join(output, path));
     }
   }
-  for (const path of ['index.html', 'tsconfig.json', 'tsconfig.client.json']) {
+  for (const path of ['index.html', 'tsconfig.json', 'tsconfig.base.json', 'tsconfig.client.json']) {
     let data;
     try { data=await readFile(join(source,path)); } catch(error) {if(error.code==='ENOENT')continue;throw error;}
     files.push({path,sha256:createHash('sha256').update(data).digest('hex'),bytes:data.length});

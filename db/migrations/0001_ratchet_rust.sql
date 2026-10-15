@@ -1,6 +1,13 @@
 -- Fresh Ratchet Rust installation. No history import or legacy D1 message storage.
 PRAGMA foreign_keys=ON;
 
+CREATE TABLE authority_operations (
+  operation_id TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK(status IN ('PENDING','COMMITTED','ABORTED')),
+  created_at TEXT NOT NULL,
+  completed_at TEXT
+);
+
 CREATE TABLE account_wallpapers (
   workspace_id TEXT NOT NULL REFERENCES workspaces(workspace_id) ON DELETE CASCADE,
   owner_admin_user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
