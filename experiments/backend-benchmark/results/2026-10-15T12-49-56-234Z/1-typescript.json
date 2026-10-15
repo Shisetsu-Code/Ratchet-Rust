@@ -1,0 +1,282 @@
+[
+  {
+    "name": "1000-one-chat-256B",
+    "status": "passed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 1000,
+    "max_global_inflight": 32,
+    "fanout_sockets_per_room": 21,
+    "elapsed_ms": 5713.46,
+    "throughput_messages_s": 175.03,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 180.92,
+      "p50_ms": 181.79489999999987,
+      "p95_ms": 211.8125,
+      "p99_ms": 224.16990000000033,
+      "max_ms": 243.96100000000024
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 181.49,
+      "p50_ms": 182.2577000000001,
+      "p95_ms": 212.16269999999986,
+      "p99_ms": 224.9675000000002,
+      "max_ms": 244.76550000000043
+    },
+    "completion_from_offer": {
+      "count": 1000,
+      "mean_ms": 2868.65,
+      "p50_ms": 2864.4356999999995,
+      "p95_ms": 5433.1293000000005,
+      "p99_ms": 5649.377,
+      "max_ms": 5698.4141
+    },
+    "recipient_from_offer": {
+      "count": 1000,
+      "mean_ms": 2869.22,
+      "p50_ms": 2865.2715999999996,
+      "p95_ms": 5433.6775,
+      "p99_ms": 5649.6176,
+      "max_ms": 5699.1257000000005
+    },
+    "client_queue": {
+      "count": 1000,
+      "mean_ms": 2687.72,
+      "p50_ms": 2674.5323,
+      "p95_ms": 5241.6273,
+      "p99_ms": 5440.062099999999,
+      "max_ms": 5632.501
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 6,
+    "recovery_ms": 262.33,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 5437.5,
+      "rss_end_bytes": 400416768,
+      "process_peak_rss_bytes": 400416768
+    },
+    "load_generator": {
+      "cpu_ms": 1875,
+      "event_loop_p99_ms": 23.48,
+      "event_loop_max_ms": 24.69
+    }
+  },
+  {
+    "name": "1000-twenty-chats-256B",
+    "status": "passed",
+    "users": 20,
+    "rooms": 20,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 1000,
+    "max_global_inflight": 32,
+    "fanout_sockets_per_room": 2,
+    "elapsed_ms": 5312.55,
+    "throughput_messages_s": 188.23,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 168.12,
+      "p50_ms": 168.02080000000024,
+      "p95_ms": 207.4974999999995,
+      "p99_ms": 218.76549999999952,
+      "max_ms": 225.60720000000038
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 168.2,
+      "p50_ms": 168.09610000000066,
+      "p95_ms": 207.5671000000002,
+      "p99_ms": 218.84389999999985,
+      "max_ms": 225.6786000000011
+    },
+    "completion_from_offer": {
+      "count": 1000,
+      "mean_ms": 2664.71,
+      "p50_ms": 2596.767,
+      "p95_ms": 5081.3464,
+      "p99_ms": 5249.341699999999,
+      "max_ms": 5296.048000000001
+    },
+    "recipient_from_offer": {
+      "count": 1000,
+      "mean_ms": 2664.79,
+      "p50_ms": 2596.9277,
+      "p95_ms": 5081.412200000001,
+      "p99_ms": 5249.397499999999,
+      "max_ms": 5296.0856
+    },
+    "client_queue": {
+      "count": 1000,
+      "mean_ms": 2496.59,
+      "p50_ms": 2435.3688,
+      "p95_ms": 4915.395399999999,
+      "p99_ms": 5082.4211,
+      "max_ms": 5230.6062
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 20,
+    "recovery_ms": 906.47,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 3968.75,
+      "rss_end_bytes": 615919616,
+      "process_peak_rss_bytes": 615919616
+    },
+    "load_generator": {
+      "cpu_ms": 328,
+      "event_loop_p99_ms": 21.05,
+      "event_loop_max_ms": 22.56
+    }
+  },
+  {
+    "name": "2000-one-chat-256B",
+    "status": "passed",
+    "users": 40,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 256,
+    "messages": 2000,
+    "max_global_inflight": 32,
+    "fanout_sockets_per_room": 41,
+    "elapsed_ms": 16016.68,
+    "throughput_messages_s": 124.87,
+    "ack": {
+      "count": 2000,
+      "mean_ms": 254.99,
+      "p50_ms": 240.4405000000006,
+      "p95_ms": 372.717099999998,
+      "p99_ms": 534.1080000000002,
+      "max_ms": 644.5902999999998
+    },
+    "recipient_arrival": {
+      "count": 2000,
+      "mean_ms": 256.3,
+      "p50_ms": 241.82619999999588,
+      "p95_ms": 373.73899999999776,
+      "p99_ms": 534.644400000001,
+      "max_ms": 645.9030000000021
+    },
+    "completion_from_offer": {
+      "count": 2000,
+      "mean_ms": 8119.16,
+      "p50_ms": 7830.8403,
+      "p95_ms": 15413.7362,
+      "p99_ms": 15892.5642,
+      "max_ms": 16012.065000000002
+    },
+    "recipient_from_offer": {
+      "count": 2000,
+      "mean_ms": 8120.47,
+      "p50_ms": 7833.8933,
+      "p95_ms": 15414.431100000002,
+      "p99_ms": 15893.703099999999,
+      "max_ms": 16013.773399999998
+    },
+    "client_queue": {
+      "count": 2000,
+      "mean_ms": 7864.17,
+      "p50_ms": 7569.178400000001,
+      "p95_ms": 15165.712899999999,
+      "p99_ms": 15679.794600000001,
+      "max_ms": 15867.4473
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 2000,
+    "recovery_pages": 11,
+    "recovery_ms": 365.53,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 16265.63,
+      "rss_end_bytes": 773873664,
+      "process_peak_rss_bytes": 800731136
+    },
+    "load_generator": {
+      "cpu_ms": 7001,
+      "event_loop_p99_ms": 23.36,
+      "event_loop_max_ms": 25.51
+    }
+  },
+  {
+    "name": "1000-one-chat-4KiB",
+    "status": "passed",
+    "users": 20,
+    "rooms": 1,
+    "per_user": 50,
+    "text_bytes": 4096,
+    "messages": 1000,
+    "max_global_inflight": 32,
+    "fanout_sockets_per_room": 21,
+    "elapsed_ms": 5942.98,
+    "throughput_messages_s": 168.27,
+    "ack": {
+      "count": 1000,
+      "mean_ms": 188.55,
+      "p50_ms": 185.80479999999807,
+      "p95_ms": 227.70279999999912,
+      "p99_ms": 275.25760000000446,
+      "max_ms": 278.1799000000028
+    },
+    "recipient_arrival": {
+      "count": 1000,
+      "mean_ms": 189.15,
+      "p50_ms": 186.4126000000033,
+      "p95_ms": 228.36849999999686,
+      "p99_ms": 275.5304000000033,
+      "max_ms": 278.5051999999996
+    },
+    "completion_from_offer": {
+      "count": 1000,
+      "mean_ms": 3045.76,
+      "p50_ms": 3070.9902999999977,
+      "p95_ms": 5691.259299999998,
+      "p99_ms": 5888.8966,
+      "max_ms": 5941.977399999996
+    },
+    "recipient_from_offer": {
+      "count": 1000,
+      "mean_ms": 3046.37,
+      "p50_ms": 3072.1955000000016,
+      "p95_ms": 5691.7428,
+      "p99_ms": 5889.360699999997,
+      "max_ms": 5942.952899999997
+    },
+    "client_queue": {
+      "count": 1000,
+      "mean_ms": 2857.22,
+      "p50_ms": 2876.094100000002,
+      "p95_ms": 5512.6380999999965,
+      "p99_ms": 5699.927799999998,
+      "max_ms": 5866.688799999996
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 1000,
+    "recovery_pages": 6,
+    "recovery_ms": 290.61,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 5718.75,
+      "rss_end_bytes": 804147200,
+      "process_peak_rss_bytes": 847794176
+    },
+    "load_generator": {
+      "cpu_ms": 1984,
+      "event_loop_p99_ms": 22.41,
+      "event_loop_max_ms": 24.71
+    }
+  }
+]

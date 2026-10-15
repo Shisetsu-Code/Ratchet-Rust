@@ -2,6 +2,7 @@ pub(crate) mod authority;
 pub mod control;
 pub mod metadata;
 pub mod routes;
+mod send;
 mod storage;
 use crate::http::{self, ApiError, ApiResult};
 use authority::{Authority, Lease};
@@ -37,7 +38,9 @@ pub struct ChatRealtime {
     projection_scheduled: Cell<bool>,
     generation: Cell<u64>,
     crypto: RefCell<Option<StorageCrypto>>,
+    authority_cache: RefCell<authority::LocalAuthority>,
     send_lane: ratchet_core::lane::FifoLane,
+    sends: send::SendQueue,
     publication_lane: ratchet_core::lane::FifoLane,
 }
 
@@ -56,7 +59,9 @@ impl ChatRealtime {
     fn ensure(&self) -> ApiResult<()> {
         if !self.initialized.get() {
             self.store.initialize()?;
-            authority::initialize(&self.store.sql())?;
+            self.authority_cache
+                .borrow_mut()
+                .initialize(&self.store.sql())?;
             self.initialized.set(true);
         }
         Ok(())
@@ -88,8 +93,13 @@ impl ChatRealtime {
         if self.state.id().to_string() != namespace.id_from_name(&meta.chat_id)?.to_string() {
             return Err(ApiError::domain("CHAT_NOT_AVAILABLE", 403));
         }
-        authority::assert_open(&self.store.sql())?;
-        if !fresh && let Some(lease) = authority::cached(&self.store.sql(), meta)? {
+        self.authority_cache.borrow().assert_open()?;
+        if !fresh
+            && let Some(lease) = self
+                .authority_cache
+                .borrow_mut()
+                .cached(&self.store.sql(), meta)?
+        {
             return Ok(lease);
         }
         let generation = self.generation.get();
@@ -118,7 +128,9 @@ impl ChatRealtime {
         if generation != self.generation.get() {
             return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
         }
-        authority::save(&self.store.sql(), meta, &lease)?;
+        self.authority_cache
+            .borrow_mut()
+            .save(&self.store.sql(), meta, &lease)?;
         Ok(lease)
     }
     async fn message_quota(
@@ -154,117 +166,15 @@ impl ChatRealtime {
         }
         Ok(())
     }
-    async fn send_message(&self, meta: &Authority, input: &SendRequest) -> ApiResult<Commit> {
-        // Serialize preparation/commit order, then release before the durability wait.
-        let lane = self.send_lane.enter().await?;
-        let lease = self.authorize(meta, false).await?;
-        let generation = self.generation.get();
-        let duplicate = self
-            .store
-            .lookup(&meta.device_id, &input.client_message_id)?
-            .is_some();
-        self.message_quota(meta, &lease, duplicate).await?;
-        let author = Author {
-            chat_id: meta.chat_id.clone(),
-            user_id: meta.user_id.clone(),
-            device_id: meta.device_id.clone(),
-        };
-        let (row, ciphertext) = self.with_crypto(&meta.chat_id, |crypto| {
-            self.store
-                .prepare(crypto, &author, input, lease.display_name.clone())
-        })?;
-        let fingerprint = row.fingerprint.clone();
-        let db = crate::db::Db(self.env.d1("DB")?);
-        if !duplicate && !input.attachment_ids.is_empty() {
-            let auth = crate::auth::AuthContext {
-                session_id: meta.session_id.clone(),
-                user_id: meta.user_id.clone(),
-                device_id: meta.device_id.clone(),
-                role: lease.user_role.clone(),
-                device_authorized: true,
-                webauthn_verified_at: None,
-                authenticator_verified_at: None,
-            };
-            if let Err(error) = crate::files::claim_attachments(
-                &db,
-                &auth,
-                &meta.chat_id,
-                &input.client_message_id,
-                &fingerprint,
-                &input.attachment_ids,
-            )
-            .await
-            {
-                if !duplicate && matches!(&error, ApiError::Domain(_)) {
-                    crate::files::release_claims(
-                        &db,
-                        &meta.chat_id,
-                        &input.client_message_id,
-                        &meta.device_id,
-                        &fingerprint,
-                        &input.attachment_ids,
-                    )
-                    .await?;
-                }
-                return Err(error);
-            }
-        }
-        let committed = (|| {
-            authority::assert_open(&self.store.sql())?;
-            if generation != self.generation.get() {
-                return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
-            }
-            self.store.commit(row, lease.can_mutate)
-        })();
-        let commit = match committed {
-            Ok(commit) => commit,
-            Err(error) => {
-                if !duplicate
-                    && !input.attachment_ids.is_empty()
-                    && matches!(&error, ApiError::Domain(_))
-                {
-                    crate::files::release_claims(
-                        &db,
-                        &meta.chat_id,
-                        &input.client_message_id,
-                        &meta.device_id,
-                        &fingerprint,
-                        &input.attachment_ids,
-                    )
-                    .await?;
-                }
-                return Err(error);
-            }
-        };
-        drop(lane);
-        let _publication = enter_publication(&self.publication_lane, async {
-            self.schedule_projection().await?;
-            self.store.durable().await
-        })
-        .await?;
-        if !commit.duplicate {
-            let env = self.env.clone();
-            let chat = meta.chat_id.clone();
-            let sender = meta.device_id.clone();
-            self.state.wait_until(async move {
-                let _ = crate::files::notify_push(&env, &chat, &sender).await;
-            });
-            for socket in self.state.get_websockets() {
-                if let Some(peer) = socket.deserialize_attachment::<Authority>()?
-                    && authority::cached(&self.store.sql(), &peer)?.is_some()
-                {
-                    let event = json!({"type":"message.committed","chat_id":meta.chat_id,"message_id":commit.message_id,"client_message_id":commit.client_message_id,"sender_user_id":meta.user_id,"sender_device_id":meta.device_id,"sender_display_name":lease.display_name,"sender_sequence":input.sender_sequence,"revision":commit.revision,"accepted_at":commit.accepted_at,"mutation":input.mutation,"reply_to_message_id":input.reply_to_message_id,"envelope":{"recipient_user_id":peer.user_id,"recipient_device_id":peer.device_id,"protocol":"secure-messaging","protocol_version":2,"header":"server-sqlite-v1","ciphertext":ciphertext}});
-                    let _ = socket.send(&event);
-                }
-            }
-        }
-        Ok(commit)
-    }
     fn presence(&self, chat_id: &str) -> ApiResult<()> {
         let mut users = BTreeSet::new();
         for socket in self.state.get_websockets() {
             if let Some(peer) = socket.deserialize_attachment::<Authority>()?
-                && authority::cached(&self.store.sql(), &peer)?.is_some()
+                && self
+                    .authority_cache
+                    .borrow_mut()
+                    .cached(&self.store.sql(), &peer)?
+                    .is_some()
             {
                 users.insert(peer.user_id);
             }
@@ -298,6 +208,7 @@ impl ChatRealtime {
                 .as_str()
                 .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
             self.generation.set(self.generation.get() + 1);
+            self.authority_cache.borrow_mut().invalidate();
             self.registered.set(true);
             self.store
                 .sql()
@@ -306,6 +217,9 @@ impl ChatRealtime {
                 self.store
                     .sql()
                     .exec(include_str!("fence.sql"), vec![id.into()])?;
+                self.authority_cache
+                    .borrow_mut()
+                    .refresh(&self.store.sql())?;
             } else {
                 self.store.sql().exec(
                     "INSERT OR IGNORE INTO authority_releases VALUES(?)",
@@ -314,6 +228,9 @@ impl ChatRealtime {
                 self.store
                     .sql()
                     .exec("DELETE FROM authority_fence WHERE id=?", vec![id.into()])?;
+                self.authority_cache
+                    .borrow_mut()
+                    .refresh(&self.store.sql())?;
                 for socket in self.state.get_websockets() {
                     if let Some(peer) = socket.deserialize_attachment::<Authority>()? {
                         match self.authorize(&peer, true).await {
@@ -471,7 +388,11 @@ impl ChatRealtime {
                     let event = json!({"type":"receipt.committed","chat_id":meta.chat_id,"revision":row["revision"],"message_id":row["message_id"],"user_id":meta.user_id,"state":row["state"]});
                     for socket in self.state.get_websockets() {
                         if let Some(peer) = socket.deserialize_attachment::<Authority>()?
-                            && authority::cached(&self.store.sql(), &peer)?.is_some()
+                            && self
+                                .authority_cache
+                                .borrow_mut()
+                                .cached(&self.store.sql(), &peer)?
+                                .is_some()
                         {
                             let _ = socket.send(&event);
                         }
@@ -496,7 +417,9 @@ impl DurableObject for ChatRealtime {
             projection_scheduled: Cell::new(false),
             generation: Cell::new(0),
             crypto: RefCell::new(None),
+            authority_cache: RefCell::new(authority::LocalAuthority::new()),
             send_lane: ratchet_core::lane::FifoLane::new(),
+            sends: send::SendQueue::new(),
             publication_lane: ratchet_core::lane::FifoLane::new(),
         }
     }

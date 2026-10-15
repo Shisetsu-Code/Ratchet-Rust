@@ -1,6 +1,14 @@
 # Validación de Ratchet Rust
 
-Actualización de rendimiento: la [comparación local contra TypeScript](BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md) completó 24 casos, tres rondas por versión y 30.000 mensajes medidos/recuperados. El Rust actual resultó más lento en los cuatro escenarios. Esto identifica una regresión de rendimiento del port, además de las reservas operativas documentadas debajo; no se debe confundir la aprobación de contratos con una mejora de capacidad.
+## Recuperación de optimizaciones — 2026-10-15
+
+El backend vuelve a usar caché de permisos invalidada por cercado/liberación, preparación concurrente limitada a 64 y lotes inmediatos de hasta 16 con durabilidad compartida. Mantiene transacciones individuales, deduplicación, secuencias, claims de adjuntos y publicación FIFO con recibos. La sesión se comprueba también al confirmar, para impedir que venza mientras el trabajo espera en cola.
+
+Regresión del artefacto corregido: **52 pruebas Rust, 3 criptográficas, 5 de herramientas y 34 contratos completos aprobados**; estos últimos en 65,064 s. Formato, Clippy nativo/WASM y tipos del cliente aprobados. Tres contratos nuevos cubren un rechazo seguido de envíos válidos, duplicados en una misma ráfaga y recibos concurrentes con mensajes. La suite incluye navegador real, tres adjuntos con SHA-256 idéntico, fondo compartido con píxeles idénticos, offline/reconexión, revocación y consola owner.
+
+La carga integrada sin ventana del generador recuperó los 1.000 mensajes desde 20 cuentas en cinco páginas, sin pérdidas ni duplicados; el lote terminó en 5,804 s. Esa muestra no sustituye la comparación pareada: [benchmark posterior a las correcciones](BENCHMARK_RUST_OPTIMIZED_2026-10-15.md). Las cifras anteriores que siguen debajo se conservan como historial.
+
+Historial previo a las correcciones: la [primera comparación contra TypeScript](BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md) completó 24 casos y 30.000 mensajes; detectó una regresión del port. Ese informe identifica el artefacto anterior y se conserva para comparar la mejora, sin confundir aprobación funcional con capacidad.
 
 Cierre de implementación y pruebas del 2026-10-15. Las 74 rutas activas están implementadas en Rust y comprobadas localmente; staging independiente desplegado y recorrido funcional remoto aprobado. Implementación publicada y verificada en GitHub: `72a40707384a09bd82421ba3484c0a03fe9f1c90`.
 

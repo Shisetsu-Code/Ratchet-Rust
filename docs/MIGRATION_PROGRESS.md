@@ -101,3 +101,11 @@ La entrega física de push y campañas adicionales de fallos de infraestructura 
 - Resultado reproducible/limitaciones en docs/validation-results.json. Publicación de este cierre en main del repositorio dedicado; no hay cambios en el despliegue de referencia.
 
 - Publicación comprobada: commit de implementación 72a40707384a09bd82421ba3484c0a03fe9f1c90 en origin/main; cierre documental posterior sin cambios de runtime.
+
+## Optimizaciones recuperadas tras el benchmark — 2026-10-15
+
+- Caché de permisos por objeto, invalidación antes de cercado/liberación y recarga del fence persistido; fallos de recarga mantienen el chat cerrado. Hit caliente sin SELECT/deserialización del grant.
+- Preparación concurrente limitada a 64 y reserva FIFO antes del primer await. Lotes inmediatos de hasta 16 listos; sin temporizador ni cambio de cuotas. Se comparte durabilidad, conservando cada transacción y el orden de publicación con recibos.
+- Control de generación y vencimiento justo antes del commit; reconciliación de adjuntos excluida entre claim y confirmación. Cancelaciones y errores liberan la cola, sin dejar seguidores bloqueados.
+- 52 pruebas Rust + 3 crypto + 5 tooling + 34 contratos completos aprobados; formato/Clippy nativo y WASM/tipos aprobados. Revisión independiente de invalidación, orden, deduplicación y claims realizada.
+- Comparación repetida con las mismas cuatro cargas y TypeScript intacto: [resultados posteriores](BENCHMARK_RUST_OPTIMIZED_2026-10-15.md). El primer benchmark se conserva para mostrar la regresión original y la mejora medida, sin atribuirla sólo al lenguaje.

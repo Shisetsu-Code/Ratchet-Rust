@@ -5,6 +5,7 @@ pub mod lane;
 pub mod message;
 pub mod password;
 pub mod policy;
+pub mod ready_batch;
 pub mod receipt;
 pub mod signatures;
 pub mod storage_crypto;

@@ -1,6 +1,6 @@
 # Ratchet Rust
 
-Benchmark local de alta carga: este port Rust tardó entre 1,28 y 3,12 veces lo de la versión TypeScript de referencia. Tres rondas pareadas, 24 casos y 30.000 mensajes recuperados. Ver [comparación y datos reproducibles](docs/BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md); la paridad funcional no implica paridad de rendimiento.
+Recuperadas la caché de permisos, la preparación concurrente y los lotes de hasta 16. El benchmark local repetido redujo los tiempos Rust entre 11,3% y 65,8% frente al port anterior: 1.000 mensajes en un chat, 12,50 → 5,95 s; 2.000, 46,68 → 15,97 s. Ahora queda cerca de TypeScript, sin ventaja general demostrada. Tres rondas pareadas, 24 casos, 30.000 mensajes recuperados sin pérdidas ni duplicados. Ver [comparación posterior y datos](docs/BENCHMARK_RUST_OPTIMIZED_2026-10-15.md) y [benchmark histórico](docs/BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md).
 
 Backend de Ratchet en Rust/WASM para Cloudflare Workers, con interfaz React y API desde el mismo origen. La migración implementa las 74 rutas activas de Ratchet-SQLite y está desplegada en un staging nuevo e independiente. No utiliza un backend TypeScript de respaldo.
 
@@ -21,6 +21,8 @@ La instalación empieza vacía con `db/migrations/0001_ratchet_rust.sql`. No imp
 Los mensajes viajan por HTTPS/WSS y el servidor puede leer su contenido, igual que en el prototipo de referencia actual. El almacenamiento del servidor usa AES-GCM; la caché y la cola local del navegador permanecen cifradas. **Los mensajes no se presentan como cifrado de extremo a extremo.** Los adjuntos y fondos sí se cifran en el cliente. El transporte explícito está en `src/client/crypto/server-message-transport.ts`.
 
 ## Validación
+
+Última regresión tras recuperar optimizaciones: **52 pruebas Rust, 3 criptográficas, 5 de herramientas y 34 contratos integrados aprobados**, más formato, Clippy nativo/WASM y tipos del cliente. Incluye navegador, adjuntos, fondo compartido, ráfagas, recuperación, revocación y consola; los tres contratos nuevos cubren errores dentro de ráfagas, duplicados concurrentes y orden entre recibos y mensajes. Los resultados anteriores se conservan abajo como historial.
 
 La regresión integrada final pasó **31/31 contratos** en 81,208 s, incluidos navegador real, owner, identidad, administración, archivos, metadatos y carga. Pasaron también las suites Rust de workspace, tres pruebas criptográficas, cinco pruebas de herramientas, tipos/build del cliente y auditoría npm sin vulnerabilidades. El lote de 1.000 mensajes desde 20 cuentas terminó en 16,033 s y se recuperó en cinco páginas sin pérdida ni duplicación.
 
