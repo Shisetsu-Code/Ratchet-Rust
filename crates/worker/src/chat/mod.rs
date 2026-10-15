@@ -4,6 +4,7 @@ pub mod metadata;
 pub mod routes;
 mod send;
 mod storage;
+mod timing;
 use crate::http::{self, ApiError, ApiResult};
 use authority::{Authority, Lease};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -41,6 +42,7 @@ pub struct ChatRealtime {
     authority_cache: RefCell<authority::LocalAuthority>,
     send_lane: ratchet_core::lane::FifoLane,
     sends: send::SendQueue,
+    timing_probe_enabled: bool,
     publication_lane: ratchet_core::lane::FifoLane,
 }
 
@@ -138,14 +140,17 @@ impl ChatRealtime {
         meta: &Authority,
         lease: &Lease,
         duplicate: bool,
+        probe: &mut timing::Probe,
     ) -> ApiResult<()> {
-        if !self
+        let started = probe.now();
+        let allowed = self
             .env
             .rate_limiter("MESSAGE_RATE_LIMITER")?
             .limit(format!("message:{}:{}", meta.user_id, meta.device_id))
             .await?
-            .success
-        {
+            .success;
+        probe.record("quota_device_io", started);
+        if !allowed {
             return Err(ApiError::retryable("MESSAGE_RATE_LIMITED", 503));
         }
         if lease.user_role == "CUSTOMER" && !duplicate {
@@ -153,13 +158,22 @@ impl ChatRealtime {
                 "CUSTOMER_MESSAGE_BURST_RATE_LIMITER",
                 "CUSTOMER_MESSAGE_SUSTAINED_RATE_LIMITER",
             ] {
-                if !self
+                let started = probe.now();
+                let allowed = self
                     .env
                     .rate_limiter(binding)?
                     .limit(format!("customer:{}", meta.user_id))
                     .await?
-                    .success
-                {
+                    .success;
+                probe.record(
+                    if binding == "CUSTOMER_MESSAGE_BURST_RATE_LIMITER" {
+                        "quota_customer_burst_io"
+                    } else {
+                        "quota_customer_sustained_io"
+                    },
+                    started,
+                );
+                if !allowed {
                     return Err(ApiError::retryable("CUSTOMER_MESSAGE_RATE_LIMITED", 429));
                 }
             }
@@ -408,6 +422,9 @@ impl ChatRealtime {
 impl DurableObject for ChatRealtime {
     fn new(state: State, env: Env) -> Self {
         let store = Store::new(state.storage());
+        let timing_probe_enabled = env
+            .var("RATCHET_TIMING_PROBE")
+            .is_ok_and(|v| v.to_string() == "sample10");
         Self {
             state,
             env,
@@ -420,6 +437,7 @@ impl DurableObject for ChatRealtime {
             authority_cache: RefCell::new(authority::LocalAuthority::new()),
             send_lane: ratchet_core::lane::FifoLane::new(),
             sends: send::SendQueue::new(),
+            timing_probe_enabled,
             publication_lane: ratchet_core::lane::FifoLane::new(),
         }
     }
@@ -440,6 +458,7 @@ impl DurableObject for ChatRealtime {
         socket: WebSocket,
         message: WebSocketIncomingMessage,
     ) -> Result<()> {
+        let entry_started = timing::snapshot(self.timing_probe_enabled);
         let Some(meta) = socket.deserialize_attachment::<Authority>()? else {
             return socket.close(Some(4001), Some("Session required"));
         };
@@ -471,8 +490,12 @@ impl DurableObject for ChatRealtime {
                     .unwrap_or_default();
                 let input = serde_json::from_value::<SendRequest>(value["request"].clone())
                     .map_err(|_| ApiError::domain("VALIDATION_ERROR", 422));
+                let decoded_at = timing::snapshot(self.timing_probe_enabled);
                 let result = match input {
-                    Ok(input) => self.send_message(&meta, &input).await,
+                    Ok(input) => {
+                        self.send_message_timed(&meta, &input, Some((entry_started, decoded_at)))
+                            .await
+                    }
                     Err(error) => Err(error),
                 };
                 match result{Ok(commit)=>socket.send(&json!({"type":"message.ack","chat_id":meta.chat_id,"message_id":commit.message_id,"client_message_id":commit.client_message_id,"revision":commit.revision,"accepted_at":commit.accepted_at,"duplicate":commit.duplicate}))?,Err(error)=>{let(error_type,retryable)=match error{ApiError::Domain(e)=>(e.code,e.retryable),ApiError::Runtime(_)=>("PERSIST_FAILED",true)};socket.send(&json!({"type":"message.nack","chat_id":meta.chat_id,"client_message_id":id,"error_type":error_type,"retryable":retryable}))?;}}

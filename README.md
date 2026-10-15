@@ -1,5 +1,7 @@
 # Ratchet Rust
 
+Desglose medido por etapas: con 32 mensajes en vuelo, las esperas de cuotas dominan el handler; con un solo envío, el ACK de las muestras baja de 186,5 a 11,4 ms. Se midieron 13.000 mensajes sin pérdidas; el diagnóstico es local, muestreado y desactivado por defecto. [Datos, desglose y límites](docs/LATENCY_BREAKDOWN_2026-10-15.md). No se cambió ni desplegó una optimización adicional.
+
 Recuperadas la caché de permisos, la preparación concurrente y los lotes de hasta 16. El benchmark local repetido redujo los tiempos Rust entre 11,3% y 65,8% frente al port anterior: 1.000 mensajes en un chat, 12,50 → 5,95 s; 2.000, 46,68 → 15,97 s. Ahora queda cerca de TypeScript, sin ventaja general demostrada. Tres rondas pareadas, 24 casos, 30.000 mensajes recuperados sin pérdidas ni duplicados. Ver [comparación posterior y datos](docs/BENCHMARK_RUST_OPTIMIZED_2026-10-15.md) y [benchmark histórico](docs/BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md).
 
 Backend de Ratchet en Rust/WASM para Cloudflare Workers, con interfaz React y API desde el mismo origen. La migración implementa las 74 rutas activas de Ratchet-SQLite y está desplegada en un staging nuevo e independiente. No utiliza un backend TypeScript de respaldo.

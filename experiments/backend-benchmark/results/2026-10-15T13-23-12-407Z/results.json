@@ -1,0 +1,79 @@
+[
+  {
+    "round": 1,
+    "variant": "rust",
+    "exit": 0,
+    "results": [
+      {
+        "name": "1000-one-chat-256B",
+        "status": "passed",
+        "users": 20,
+        "rooms": 1,
+        "per_user": 50,
+        "text_bytes": 256,
+        "messages": 1000,
+        "max_global_inflight": 32,
+        "fanout_sockets_per_room": 21,
+        "elapsed_ms": 5561.92,
+        "throughput_messages_s": 179.79,
+        "ack": {
+          "count": 1000,
+          "mean_ms": 176.24,
+          "p50_ms": 177.47849999999994,
+          "p95_ms": 192.70929999999998,
+          "p99_ms": 216.44899999999961,
+          "max_ms": 235.82079999999996
+        },
+        "recipient_arrival": {
+          "count": 1000,
+          "mean_ms": 168.25,
+          "p50_ms": 170.14390000000049,
+          "p95_ms": 186.0009,
+          "p99_ms": 209.83820000000014,
+          "max_ms": 232.22430000000008
+        },
+        "completion_from_offer": {
+          "count": 1000,
+          "mean_ms": 2846.93,
+          "p50_ms": 2845.0566000000003,
+          "p95_ms": 5314.6782,
+          "p99_ms": 5499.623799999999,
+          "max_ms": 5554.109
+        },
+        "recipient_from_offer": {
+          "count": 1000,
+          "mean_ms": 2838.94,
+          "p50_ms": 2836.8920000000003,
+          "p95_ms": 5306.946,
+          "p99_ms": 5496.866899999999,
+          "max_ms": 5553.8878
+        },
+        "client_queue": {
+          "count": 1000,
+          "mean_ms": 2670.69,
+          "p50_ms": 2673.7092,
+          "p95_ms": 5130.7017,
+          "p99_ms": 5315.1487,
+          "max_ms": 5489.5771
+        },
+        "lost": 0,
+        "duplicates": 0,
+        "recovered": 1000,
+        "recovery_pages": 6,
+        "recovery_ms": 281.44,
+        "out_of_order_rooms": 0,
+        "server": {
+          "workerd_processes": 2,
+          "cpu_ms": 5406.25,
+          "rss_end_bytes": 382545920,
+          "process_peak_rss_bytes": 382545920
+        },
+        "load_generator": {
+          "cpu_ms": 1734,
+          "event_loop_p99_ms": 22.1,
+          "event_loop_max_ms": 25.79
+        }
+      }
+    ]
+  }
+]

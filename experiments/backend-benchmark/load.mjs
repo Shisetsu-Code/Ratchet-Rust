@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import {randomUUID,createHash,randomBytes} from 'node:crypto';
-import {writeFile} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {monitorEventLoopDelay} from 'node:perf_hooks';
 import WebSocket from 'ws';
+import {timingProfile} from './timing-profile.mjs';
 import {base,fixture,localSql,api} from '../../tests/contracts/fixtures.mjs';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -76,16 +77,26 @@ async function runCase(definition){
    assert.equal(seen.size,[...all.values()].filter(f=>f.chat===observer.chat).length);
   }
   assert.equal(recovered,records.size);
-  return{name,status:'passed',users,rooms,per_user:perUser,text_bytes:textBytes,messages:records.size,max_global_inflight:window,fanout_sockets_per_room:1+users/rooms,elapsed_ms:round(elapsed),throughput_messages_s:round(records.size/(elapsed/1000)),ack:stats(ackTimes),recipient_arrival:stats(arrivalTimes),completion_from_offer:stats(offeredCompletion),recipient_from_offer:stats(offeredArrival),client_queue:stats(clientQueue),lost:0,duplicates,recovered,recovery_pages:pages,recovery_ms:round(performance.now()-recoveryStart),out_of_order_rooms:observers.filter(p=>p.revisions.some((v,i,a)=>i>0&&v<a[i-1])).length,server:aggregateCpu(before,after),load_generator:{cpu_ms:round((clientCpu.user+clientCpu.system)/1000),event_loop_p99_ms:round(loop.percentile(99)/1e6),event_loop_max_ms:round(loop.max/1e6)}};
+  let timing_profile;
+  if(process.env.RATCHET_BENCH_PROFILE==='1'){
+   const samples=[...records.values()].map(f=>({id:f.id,chat:f.chat,sequence:f.sequence,ack_ms:writers[s.senders.indexOf(f.actor)].acks.get(f.id)[0].time-f.queued}));
+   timing_profile=timingProfile(await readFile(process.env.RATCHET_BENCH_SERVER_LOG,'utf8'),samples,Math.floor(perUser/10)*users);
+  }
+  return{name,status:'passed',...(timing_profile?{timing_profile}:{}),users,rooms,per_user:perUser,text_bytes:textBytes,messages:records.size,max_global_inflight:window,fanout_sockets_per_room:1+users/rooms,elapsed_ms:round(elapsed),throughput_messages_s:round(records.size/(elapsed/1000)),ack:stats(ackTimes),recipient_arrival:stats(arrivalTimes),completion_from_offer:stats(offeredCompletion),recipient_from_offer:stats(offeredArrival),client_queue:stats(clientQueue),lost:0,duplicates,recovered,recovery_pages:pages,recovery_ms:round(performance.now()-recoveryStart),out_of_order_rooms:observers.filter(p=>p.revisions.some((v,i,a)=>i>0&&v<a[i-1])).length,server:aggregateCpu(before,after),load_generator:{cpu_ms:round((clientCpu.user+clientCpu.system)/1000),event_loop_p99_ms:round(loop.percentile(99)/1e6),event_loop_max_ms:round(loop.max/1e6)}};
  }catch(error){return{name,status:'failed',users,rooms,per_user:perUser,text_bytes:textBytes,error:error.message,acks:peers.reduce((n,p)=>n+p.acks.size,0),received:peers.reduce((n,p)=>n+p.messages.size,0),nacks:peers.flatMap(p=>p.nacks).map(e=>e.error_type),closed:peers.filter(p=>p.closed!==null).map(p=>p.closed)};}
  finally{for(const p of peers)p.socket.terminate();}
 }
 const smoke=process.env.RATCHET_BENCH_SMOKE==='1';
-const definitions=smoke?[{name:'smoke30',users:1,rooms:1,perUser:30,textBytes:256}]:[
+const smokeDefinition={name:'smoke30',users:1,rooms:1,perUser:30,textBytes:256};
+const standardDefinitions=[
  {name:'1000-one-chat-256B',users:20,rooms:1,perUser:50,textBytes:256},
  {name:'1000-twenty-chats-256B',users:20,rooms:20,perUser:50,textBytes:256},
  {name:'2000-one-chat-256B',users:40,rooms:1,perUser:50,textBytes:256},
  {name:'1000-one-chat-4KiB',users:20,rooms:1,perUser:50,textBytes:4096},
 ];
+const requestedCases=process.env.RATCHET_BENCH_CASES?.split(',').filter(Boolean);
+const allDefinitions=[smokeDefinition,...standardDefinitions];
+assert.ok(!requestedCases?.length||(new Set(requestedCases).size===requestedCases.length&&requestedCases.every(name=>allDefinitions.some(d=>d.name===name))),'Unknown or duplicate benchmark case');
+const definitions=requestedCases?.length?requestedCases.map(name=>allDefinitions.find(d=>d.name===name)):smoke?[smokeDefinition]:standardDefinitions;
 const results=[];for(const definition of definitions){const result=await runCase(definition);results.push(result);await writeFile(process.env.RATCHET_BENCH_OUTPUT,JSON.stringify(results,null,2));console.log('BENCH_CASE '+JSON.stringify(result));}
 if(results.some(r=>r.status!=='passed'))process.exitCode=1;

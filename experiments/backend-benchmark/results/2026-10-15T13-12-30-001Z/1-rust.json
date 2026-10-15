@@ -1,0 +1,17 @@
+[
+  {
+    "name": "smoke30",
+    "status": "failed",
+    "users": 1,
+    "rooms": 1,
+    "per_user": 30,
+    "text_bytes": 256,
+    "error": "Expected exact sampled message count\n\n0 !== 3\n",
+    "acks": 30,
+    "received": 30,
+    "nacks": [],
+    "closed": [
+      1006
+    ]
+  }
+]

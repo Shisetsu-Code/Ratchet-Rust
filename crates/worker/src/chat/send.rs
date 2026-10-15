@@ -70,6 +70,8 @@ struct Prepared {
     lease: Lease,
     generation: u64,
     duplicate: bool,
+    staged_at: f64,
+    committed_at: f64,
 }
 struct Job {
     meta: Authority,
@@ -78,9 +80,14 @@ struct Job {
     completion: Completion,
     signals: Rc<Signals>,
     _permit: PreparationPermit,
+    probe: timing::Probe,
+    ready_at: f64,
 }
 impl Job {
     fn complete(self, result: ApiResult<Commit>) {
+        if result.is_ok() && self.probe.enabled() {
+            self.probe.emit(json!({"kind":"message","client_message_id":self.input.client_message_id,"chat_id":self.meta.chat_id,"sender_sequence":self.input.sender_sequence}));
+        }
         *self.completion.borrow_mut() = Some(result);
         self.signals.wake();
     }
@@ -102,12 +109,27 @@ impl ChatRealtime {
         meta: &Authority,
         input: &SendRequest,
     ) -> ApiResult<Commit> {
+        self.send_message_timed(meta, input, None).await
+    }
+    pub(super) async fn send_message_timed(
+        &self,
+        meta: &Authority,
+        input: &SendRequest,
+        entry: Option<(f64, f64)>,
+    ) -> ApiResult<Commit> {
         // Both reservations precede the first await, including slow authorization.
+        let mut probe = timing::Probe::sampled(self.timing_probe_enabled, input.sender_sequence);
+        if let Some((started, decoded)) = entry {
+            probe.include_entry(started, decoded);
+        }
+        let started = probe.now();
         let ticket = self.sends.ready.reserve();
         let acquisition = self.sends.window.acquire();
         let permit = acquisition.await;
-        let prepared = self.prepare_send(meta, input).await;
+        probe.record("preparation_window_wait", started);
+        let prepared = self.prepare_send(meta, input, &mut probe).await;
         let completion = Rc::new(RefCell::new(None));
+        let ready_at = probe.now();
         self.sends.ready.ready(
             ticket,
             Job {
@@ -117,6 +139,8 @@ impl ChatRealtime {
                 completion: completion.clone(),
                 signals: self.sends.signals.clone(),
                 _permit: permit,
+                probe,
+                ready_at,
             },
         );
         loop {
@@ -129,14 +153,26 @@ impl ChatRealtime {
         }
     }
 
-    async fn prepare_send(&self, meta: &Authority, input: &SendRequest) -> ApiResult<Prepared> {
+    async fn prepare_send(
+        &self,
+        meta: &Authority,
+        input: &SendRequest,
+        probe: &mut timing::Probe,
+    ) -> ApiResult<Prepared> {
+        let started = probe.now();
         let lease = self.authorize(meta, false).await?;
+        probe.record("authorize", started);
         let generation = self.generation.get();
+        let started = probe.now();
         let duplicate = self
             .store
             .lookup(&meta.device_id, &input.client_message_id)?
             .is_some();
-        self.message_quota(meta, &lease, duplicate).await?;
+        probe.record("lookup", started);
+        let started = probe.now();
+        self.message_quota(meta, &lease, duplicate, probe).await?;
+        probe.record("quota_io", started);
+        let started = probe.now();
         let author = Author {
             chat_id: meta.chat_id.clone(),
             user_id: meta.user_id.clone(),
@@ -146,6 +182,7 @@ impl ChatRealtime {
             self.store
                 .prepare(crypto, &author, input, lease.display_name.clone())
         })?;
+        probe.record("prepare_validate_crypto", started);
         Ok(Prepared {
             fingerprint: row.fingerprint.clone(),
             row: Some(row),
@@ -153,6 +190,8 @@ impl ChatRealtime {
             lease,
             generation,
             duplicate,
+            staged_at: 0.0,
+            committed_at: 0.0,
         })
     }
 
@@ -212,30 +251,51 @@ impl ChatRealtime {
         }
         self.sends.draining.set(true);
         let _drain = DrainGuard(&self.sends);
+        let mut batch = timing::Probe::new(self.timing_probe_enabled);
+        let batch_size = jobs.len();
+        let batch_chat = self
+            .timing_probe_enabled
+            .then(|| jobs[0].meta.chat_id.clone());
+        let max_sequence = jobs
+            .iter()
+            .filter_map(|j| j.input.sender_sequence)
+            .max()
+            .unwrap_or(0);
+        let started = batch.now();
         // Reconciliation cannot release an attachment between claiming and committing it.
         let _lane = match self.send_lane.enter().await {
             Ok(lane) => lane,
             Err(_) => return,
         };
+        batch.record("commit_lane_wait", started);
         let mut staged = Vec::new();
         for mut job in jobs {
+            job.probe.record("ready_queue_wait", job.ready_at);
             let Some(prepared) = job.prepared.take() else {
                 job.complete(Err(ApiError::retryable("PERSIST_FAILED", 503)));
                 continue;
             };
             match prepared {
                 Err(error) => job.complete(Err(error)),
-                Ok(prepared) => match self.claim_send(&job, &prepared).await {
-                    Ok(()) => staged.push((job, prepared)),
-                    Err(error) => job.complete(Err(error)),
-                },
+                Ok(mut prepared) => {
+                    let started = job.probe.now();
+                    let claimed = self.claim_send(&job, &prepared).await;
+                    job.probe.record("attachment_claim", started);
+                    prepared.staged_at = job.probe.now();
+                    match claimed {
+                        Ok(()) => staged.push((job, prepared)),
+                        Err(error) => job.complete(Err(error)),
+                    }
+                }
             }
         }
         let mut accepted = Vec::new();
         let mut rejected = Vec::new();
         // No await from the first write through reserving the publication lane.
         // Each message retains its own transaction and idempotency validation.
-        for (job, mut prepared) in staged {
+        for (mut job, mut prepared) in staged {
+            job.probe.record("batch_staging_wait", prepared.staged_at);
+            let started = job.probe.now();
             let commit = (|| {
                 self.authority_cache.borrow().assert_open()?;
                 if prepared.generation != self.generation.get() {
@@ -252,21 +312,37 @@ impl ChatRealtime {
                     prepared.lease.can_mutate,
                 )
             })();
+            job.probe.record("sqlite_commit", started);
+            prepared.committed_at = job.probe.now();
             match commit {
                 Ok(commit) => accepted.push((job, prepared, commit)),
                 Err(error) => rejected.push((job, prepared, error)),
             }
         }
+        let projection_ms = Cell::new(0.0);
+        let sync_ms = Cell::new(0.0);
+        let started = batch.now();
         let publication = if accepted.is_empty() {
             Ok(None)
         } else {
             enter_publication(&self.publication_lane, async {
+                let started = batch.now();
                 self.schedule_projection().await?;
-                self.store.durable().await
+                projection_ms.set(batch.now() - started);
+                let started = batch.now();
+                let result = self.store.durable().await;
+                sync_ms.set(batch.now() - started);
+                result
             })
             .await
             .map(Some)
         };
+        batch.record("publication_barrier", started);
+        batch.add_elapsed("projection", projection_ms.get());
+        batch.add_elapsed("durable_sync", sync_ms.get());
+        if max_sequence > 1 && batch.enabled() {
+            batch.emit(json!({"kind":"batch","chat_id":batch_chat,"batch_size":batch_size,"max_sender_sequence":max_sequence}));
+        }
         for (job, prepared, error) in rejected {
             let error = if matches!(&error, ApiError::Domain(_)) {
                 match self.release_send_claims(&job, &prepared).await {
@@ -282,36 +358,64 @@ impl ChatRealtime {
             // A failed barrier is ambiguous: retain claims and let retries reconcile.
             return;
         };
-        for (job, prepared, commit) in accepted {
+        for (mut job, prepared, commit) in accepted {
+            job.probe.record("postcommit_wait", prepared.committed_at);
+            let started = job.probe.now();
             if !commit.duplicate
-                && let Err(error) = self.publish_send(&job, &prepared, &commit)
+                && let Err(error) = self.publish_send(&mut job, &prepared, &commit)
             {
                 job.complete(Err(error));
                 continue;
             }
+            job.probe.record("publish_total", started);
             job.complete(Ok(commit));
         }
     }
 
-    fn publish_send(&self, job: &Job, prepared: &Prepared, commit: &Commit) -> ApiResult<()> {
+    fn publish_send(&self, job: &mut Job, prepared: &Prepared, commit: &Commit) -> ApiResult<()> {
         let meta = &job.meta;
         let input = &job.input;
         let env = self.env.clone();
         let chat = meta.chat_id.clone();
         let sender = meta.device_id.clone();
+        let started = job.probe.now();
         self.state.wait_until(async move {
             let _ = crate::files::notify_push(&env, &chat, &sender).await;
         });
-        for socket in self.state.get_websockets() {
-            if let Some(peer) = socket.deserialize_attachment::<Authority>()?
-                && self
+        job.probe.record("publish_push_schedule", started);
+        let started = job.probe.now();
+        let sockets = self.state.get_websockets();
+        job.probe.record("publish_enumerate_sockets", started);
+        for socket in sockets {
+            let started = job.probe.now();
+            let peer = socket.deserialize_attachment::<Authority>()?;
+            job.probe.record("publish_peer_decode", started);
+            if let Some(peer) = peer {
+                let started = job.probe.now();
+                let authorized = self
                     .authority_cache
                     .borrow_mut()
                     .cached(&self.store.sql(), &peer)?
-                    .is_some()
-            {
+                    .is_some();
+                job.probe.record("publish_peer_authorize", started);
+                if !authorized {
+                    continue;
+                }
+                let started = job.probe.now();
                 let event = json!({"type":"message.committed","chat_id":meta.chat_id,"message_id":commit.message_id,"client_message_id":commit.client_message_id,"sender_user_id":meta.user_id,"sender_device_id":meta.device_id,"sender_display_name":prepared.lease.display_name,"sender_sequence":input.sender_sequence,"revision":commit.revision,"accepted_at":commit.accepted_at,"mutation":input.mutation,"reply_to_message_id":input.reply_to_message_id,"envelope":{"recipient_user_id":peer.user_id,"recipient_device_id":peer.device_id,"protocol":"secure-messaging","protocol_version":2,"header":"server-sqlite-v1","ciphertext":prepared.ciphertext}});
-                let _ = socket.send(&event);
+                job.probe.record("publish_event_build", started);
+                if job.probe.enabled() {
+                    let started = job.probe.now();
+                    let serialized = serde_json::to_string(&event)
+                        .map_err(|_| ApiError::domain("SERIALIZE_FAILED", 503))?;
+                    job.probe.record("publish_event_serialize", started);
+                    let started = job.probe.now();
+                    let _ = socket.send_with_str(&serialized);
+                    job.probe.record("publish_wasm_js_send", started);
+                    job.probe.fanout += 1;
+                } else {
+                    let _ = socket.send(&event);
+                }
             }
         }
         Ok(())

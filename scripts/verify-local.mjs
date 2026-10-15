@@ -9,6 +9,7 @@ const commands=[
  ['cargo',['test','--workspace','--locked','--offline']],
  ['cargo',['test','--manifest-path','crypto-wasm/Cargo.toml','--locked','--offline']],
  [process.execPath,['--test','tests/tooling/*.test.mjs']],
+ [process.execPath,['--test','experiments/backend-benchmark/timing-profile.test.mjs']],
  [process.execPath,['node_modules/typescript/bin/tsc','-p','tsconfig.client.json','--noEmit']],
  [process.execPath,['scripts/build-crypto.mjs']],
  [process.execPath,['node_modules/vite/bin/vite.js','build']],

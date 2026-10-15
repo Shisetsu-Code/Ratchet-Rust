@@ -1,0 +1,507 @@
+[
+  {
+    "name": "smoke30",
+    "status": "passed",
+    "timing_profile": {
+      "count": 3,
+      "expected_count": 3,
+      "sampling": "sender_sequence >= 2 and (sender_sequence - 1) % 10 == 0",
+      "phases_ms": {
+        "attachment_claim": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "authorize": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "batch_staging_wait": {
+          "count": 3,
+          "mean_ms": 0.3333333333333333,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "frame_decode": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "lookup": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "postcommit_wait": {
+          "count": 3,
+          "mean_ms": 2.6666666666666665,
+          "p50_ms": 2,
+          "p95_ms": 4,
+          "p99_ms": 4,
+          "max_ms": 4
+        },
+        "preparation_window_wait": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "prepare_validate_crypto": {
+          "count": 3,
+          "mean_ms": 0.3333333333333333,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_enumerate_sockets": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_event_build": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_event_serialize": {
+          "count": 3,
+          "mean_ms": 0.3333333333333333,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_peer_authorize": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_peer_decode": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_push_schedule": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "publish_total": {
+          "count": 3,
+          "mean_ms": 0.3333333333333333,
+          "p50_ms": 0,
+          "p95_ms": 1,
+          "p99_ms": 1,
+          "max_ms": 1
+        },
+        "publish_wasm_js_send": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        },
+        "quota_io": {
+          "count": 3,
+          "mean_ms": 88,
+          "p50_ms": 88,
+          "p95_ms": 93,
+          "p99_ms": 93,
+          "max_ms": 93
+        },
+        "ready_queue_wait": {
+          "count": 3,
+          "mean_ms": 1.3333333333333333,
+          "p50_ms": 1,
+          "p95_ms": 3,
+          "p99_ms": 3,
+          "max_ms": 3
+        },
+        "sqlite_commit": {
+          "count": 3,
+          "mean_ms": 0,
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        }
+      },
+      "total_ms": {
+        "count": 3,
+        "mean_ms": 93,
+        "p50_ms": 95,
+        "p95_ms": 98,
+        "p99_ms": 98,
+        "max_ms": 98
+      },
+      "external_ack_ms": {
+        "count": 3,
+        "mean_ms": 143.89603333333332,
+        "p50_ms": 143.19939999999997,
+        "p95_ms": 167.56809999999996,
+        "p99_ms": 167.56809999999996,
+        "max_ms": 167.56809999999996
+      },
+      "external_ack_residual_ms": {
+        "count": 3,
+        "mean_ms": 50.89603333333332,
+        "p50_ms": 45.19939999999997,
+        "p95_ms": 81.56809999999996,
+        "p99_ms": 81.56809999999996,
+        "max_ms": 81.56809999999996
+      },
+      "residual_tolerance_ms": 1,
+      "residual_below_tolerance_count": 0,
+      "samples": [
+        {
+          "client_message_id": "3fd12341-42d7-4afa-b539-536c329524ee",
+          "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+          "sender_sequence": 11,
+          "phases_ms": {
+            "attachment_claim": 0,
+            "authorize": 0,
+            "batch_staging_wait": 0,
+            "frame_decode": 0,
+            "lookup": 0,
+            "postcommit_wait": 4,
+            "preparation_window_wait": 0,
+            "prepare_validate_crypto": 0,
+            "publish_enumerate_sockets": 0,
+            "publish_event_build": 0,
+            "publish_event_serialize": 0,
+            "publish_peer_authorize": 0,
+            "publish_peer_decode": 0,
+            "publish_push_schedule": 0,
+            "publish_total": 0,
+            "publish_wasm_js_send": 0,
+            "quota_io": 88,
+            "ready_queue_wait": 3,
+            "sqlite_commit": 0
+          },
+          "total_ms": 95,
+          "fanout": 2,
+          "external_ack_ms": 120.92060000000004,
+          "external_ack_residual_ms": 25.920600000000036
+        },
+        {
+          "client_message_id": "3275ca95-cc2c-4700-a9dc-5362223bf18a",
+          "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+          "sender_sequence": 21,
+          "phases_ms": {
+            "attachment_claim": 0,
+            "authorize": 0,
+            "batch_staging_wait": 1,
+            "frame_decode": 0,
+            "lookup": 0,
+            "postcommit_wait": 2,
+            "preparation_window_wait": 0,
+            "prepare_validate_crypto": 0,
+            "publish_enumerate_sockets": 0,
+            "publish_event_build": 0,
+            "publish_event_serialize": 1,
+            "publish_peer_authorize": 0,
+            "publish_peer_decode": 0,
+            "publish_push_schedule": 0,
+            "publish_total": 1,
+            "publish_wasm_js_send": 0,
+            "quota_io": 93,
+            "ready_queue_wait": 1,
+            "sqlite_commit": 0
+          },
+          "total_ms": 98,
+          "fanout": 2,
+          "external_ack_ms": 143.19939999999997,
+          "external_ack_residual_ms": 45.19939999999997
+        },
+        {
+          "client_message_id": "ece36255-fb9c-4e7e-875a-58bb9a5bc164",
+          "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+          "sender_sequence": 31,
+          "phases_ms": {
+            "attachment_claim": 0,
+            "authorize": 0,
+            "batch_staging_wait": 0,
+            "frame_decode": 0,
+            "lookup": 0,
+            "postcommit_wait": 2,
+            "preparation_window_wait": 0,
+            "prepare_validate_crypto": 1,
+            "publish_enumerate_sockets": 0,
+            "publish_event_build": 0,
+            "publish_event_serialize": 0,
+            "publish_peer_authorize": 0,
+            "publish_peer_decode": 0,
+            "publish_push_schedule": 0,
+            "publish_total": 0,
+            "publish_wasm_js_send": 0,
+            "quota_io": 83,
+            "ready_queue_wait": 0,
+            "sqlite_commit": 0
+          },
+          "total_ms": 86,
+          "fanout": 2,
+          "external_ack_ms": 167.56809999999996,
+          "external_ack_residual_ms": 81.56809999999996
+        }
+      ],
+      "batches": {
+        "count": 11,
+        "batch_size": {
+          "count": 11,
+          "mean": 2.727272727272727,
+          "p50": 1,
+          "p95": 7,
+          "p99": 7,
+          "max": 7
+        },
+        "phases_ms": {
+          "commit_lane_wait": {
+            "count": 11,
+            "mean_ms": 0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+            "max_ms": 0
+          },
+          "durable_sync": {
+            "count": 11,
+            "mean_ms": 2.272727272727273,
+            "p50_ms": 2,
+            "p95_ms": 4,
+            "p99_ms": 4,
+            "max_ms": 4
+          },
+          "projection": {
+            "count": 11,
+            "mean_ms": 0,
+            "p50_ms": 0,
+            "p95_ms": 0,
+            "p99_ms": 0,
+            "max_ms": 0
+          },
+          "publication_barrier": {
+            "count": 11,
+            "mean_ms": 2.272727272727273,
+            "p50_ms": 2,
+            "p95_ms": 4,
+            "p99_ms": 4,
+            "max_ms": 4
+          }
+        },
+        "scope_note": "Case chat IDs only; batch records can include warmup or unsampled jobs sharing a sampled batch. Batch phase durations are shared and must not be added to message timings.",
+        "samples": [
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 4,
+              "projection": 0,
+              "publication_barrier": 4
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 5,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 7,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 3,
+              "projection": 0,
+              "publication_barrier": 3
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 6,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 5,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 1,
+              "projection": 0,
+              "publication_barrier": 1
+            }
+          },
+          {
+            "chat_id": "a6b3a6f1-de81-416c-9ee1-a5700e0d1129",
+            "batch_size": 1,
+            "phases_ms": {
+              "commit_lane_wait": 0,
+              "durable_sync": 2,
+              "projection": 0,
+              "publication_barrier": 2
+            }
+          }
+        ]
+      }
+    },
+    "users": 1,
+    "rooms": 1,
+    "per_user": 30,
+    "text_bytes": 256,
+    "messages": 30,
+    "max_global_inflight": 32,
+    "fanout_sockets_per_room": 2,
+    "elapsed_ms": 177.68,
+    "throughput_messages_s": 168.84,
+    "ack": {
+      "count": 30,
+      "mean_ms": 125.55,
+      "p50_ms": 121.21690000000001,
+      "p95_ms": 166.01199999999994,
+      "p99_ms": 167.56809999999996,
+      "max_ms": 167.56809999999996
+    },
+    "recipient_arrival": {
+      "count": 30,
+      "mean_ms": 122.61,
+      "p50_ms": 118.68270000000007,
+      "p95_ms": 165.11509999999998,
+      "p99_ms": 167.01729999999998,
+      "max_ms": 167.01729999999998
+    },
+    "completion_from_offer": {
+      "count": 30,
+      "mean_ms": 125.8,
+      "p50_ms": 121.4221,
+      "p95_ms": 166.33339999999998,
+      "p99_ms": 167.89969999999994,
+      "max_ms": 167.89969999999994
+    },
+    "recipient_from_offer": {
+      "count": 30,
+      "mean_ms": 122.86,
+      "p50_ms": 118.95320000000004,
+      "p95_ms": 165.43650000000002,
+      "p99_ms": 167.34889999999996,
+      "max_ms": 167.34889999999996
+    },
+    "client_queue": {
+      "count": 30,
+      "mean_ms": 0.25,
+      "p50_ms": 0.27049999999997,
+      "p95_ms": 0.32140000000003965,
+      "p99_ms": 0.33159999999998035,
+      "max_ms": 0.33159999999998035
+    },
+    "lost": 0,
+    "duplicates": 0,
+    "recovered": 30,
+    "recovery_pages": 1,
+    "recovery_ms": 111.4,
+    "out_of_order_rooms": 0,
+    "server": {
+      "workerd_processes": 2,
+      "cpu_ms": 156.25,
+      "rss_end_bytes": 191561728,
+      "process_peak_rss_bytes": 193351680
+    },
+    "load_generator": {
+      "cpu_ms": 0,
+      "event_loop_p99_ms": 21.2,
+      "event_loop_max_ms": 21.2
+    }
+  }
+]

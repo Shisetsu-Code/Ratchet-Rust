@@ -1,5 +1,15 @@
 # Comparación local TypeScript / Rust
 
+## Diagnóstico de etapas
+
+`--profile --variants rust` habilita exclusivamente en el runtime local `RATCHET_TIMING_PROBE=sample10`. Se muestrean las secuencias 11, 21, 31, 41 y 51 de cada remitente; warmups fuera. `--cases 1000-one-chat-256B` permite aislar un caso y `--inflight 1` contrastar las esperas bajo concurrencia. Sin estas opciones, el benchmark comparativo conserva su comportamiento.
+
+Se registran fases y correlación con ACK, sin contenido, cookies o claves. El reloj observado cuantiza a 1 ms; no permite interpretar cero como costo nulo. Duraciones asíncronas no son tiempo exclusivo de CPU. Padres e hijos de publicación/cuotas se solapan y los tiempos compartidos por lote no se suman por mensaje. Pruebas del parser: `node --test experiments/backend-benchmark/timing-profile.test.mjs`.
+
+`report-timing.mjs <principal> <detallado32> <control32> <detallado1>` genera [el informe por etapas](../../docs/LATENCY_BREAKDOWN_2026-10-15.md). Los runtimes de diagnóstico usan `--log-level log`: `info` oculta console.log y no sirve para capturar estas trazas. Los dos smoke iniciales conservaron 30 ACK/entregas pero fallaron la validación de captura por ese filtro; no se incluyen en las 13.000 entregas del análisis.
+
+## Comparación de versiones
+
 El generador ejecuta ambos backends con el mismo Wrangler/workerd instalado, en la misma PC y de forma secuencial. Conserva la fuente TypeScript local utilizada para la migración y comprueba sus hashes contra `baseline/source-manifest.json`. Rust usa el WASM release ya compilado; no se instala ni se despliega nada.
 
 ```powershell

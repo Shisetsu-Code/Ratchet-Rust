@@ -1,5 +1,11 @@
 # Validación de Ratchet Rust
 
+## Diagnóstico por etapas — 2026-10-15
+
+Comprobadas dos rondas de las cuatro cargas, un caso detallado con 32 en vuelo, control sin diagnóstico y el mismo caso con uno en vuelo: 13.000 mensajes recuperados, sin pérdidas, duplicados ni desorden; 1.200 muestras emparejadas con su ACK y ningún residuo inferior a -1 ms. Regresión habitual con diagnóstico apagado: 34/34 contratos (63,376 s), 54 pruebas Rust, parser 4/4, formato, Clippy nativo/WASM y build aprobados. El diagnóstico no se habilitó ni desplegó en staging.
+
+La espera de las cuotas crece de 3,90 a 93,00 ms al pasar de uno a 32 envíos en vuelo en el caso detallado. Son esperas asíncronas que también incluyen competencia por el runtime. El código confirma otra diferencia con TypeScript: las dos cuotas del cliente están secuenciadas en Rust y paralelizadas en la referencia. Se documenta como candidato para un ensayo posterior; no se retiraron ni paralelizaron comprobaciones. [Desglose y datos reproducibles](LATENCY_BREAKDOWN_2026-10-15.md).
+
 ## Recuperación de optimizaciones — 2026-10-15
 
 El backend vuelve a usar caché de permisos invalidada por cercado/liberación, preparación concurrente limitada a 64 y lotes inmediatos de hasta 16 con durabilidad compartida. Mantiene transacciones individuales, deduplicación, secuencias, claims de adjuntos y publicación FIFO con recibos. La sesión se comprueba también al confirmar, para impedir que venza mientras el trabajo espera en cola.
