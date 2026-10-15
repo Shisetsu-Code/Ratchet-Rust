@@ -6,9 +6,12 @@ El generador ejecuta ambos backends con el mismo Wrangler/workerd instalado, en 
 node experiments/backend-benchmark/run.mjs --smoke --rounds 1
 node experiments/backend-benchmark/run.mjs --rounds 3 --inflight 32
 node experiments/backend-benchmark/summarize.mjs experiments/backend-benchmark/results/CARPETA_DE_LA_EJECUCION
+node experiments/backend-benchmark/report-optimized.mjs experiments/backend-benchmark/results/CARPETA_DE_LA_EJECUCION
 ```
 
 Requiere la carpeta hermana `Ratchet-SQLite` con sus dependencias existentes. Se puede indicar otra con `RATCHET_TYPESCRIPT_SOURCE`. Los resultados identifican el commit y los hashes reales; el HEAD de TypeScript por sí solo no incluye sus cambios locales.
+
+`report-optimized.mjs` compara las nuevas rondas con el port anterior conservado. `report.mjs` sólo reproduce el informe histórico de la primera medición: su explicación describe aquel artefacto y no debe utilizarse para rondas posteriores. Ahora también se guarda la huella de cada fuente Rust en `metadata.json`.
 
 ## Condiciones
 
@@ -36,6 +39,6 @@ Cada mensaje requiere exactamente un ACK y una entrega, con ID, revisión, autor
 
 En Windows se miden CPU y memoria de los procesos workerd descendientes del servidor. El CPU es acumulado de esos procesos durante el intervalo de medición; la memoria es RSS del emulador completo, no asignación de un Worker de producción. El pico es de toda la vida del proceso. También se registra CPU y demora del event loop del generador para detectar saturación del cliente.
 
-La comparación evalúa estas dos implementaciones completas. No aísla el lenguaje: TypeScript conserva preparación superpuesta, lotes de hasta 16 y caché de permisos; Rust tiene otros caminos de ejecución. Los resultados locales no acreditan latencia WAN ni facturación/CPU de Cloudflare.
+La comparación evalúa estas dos implementaciones completas. No aísla el lenguaje: tras la corrección ambas conservan preparación superpuesta, lotes de hasta 16 y caché de permisos, con diferencias de implementación. Los resultados locales no acreditan latencia WAN ni facturación/CPU de Cloudflare.
 
 Los logs quedan ignorados por Git; los JSON públicos contienen métricas y condiciones, sin cookies ni claves. Bases y secretos sintéticos se guardan en `.wrangler/c-*`; una ejecución exitosa los elimina y una fallida conserva su estado para diagnóstico.

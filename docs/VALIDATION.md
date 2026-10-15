@@ -8,6 +8,8 @@ Regresión del artefacto corregido: **52 pruebas Rust, 3 criptográficas, 5 de h
 
 La carga integrada sin ventana del generador recuperó los 1.000 mensajes desde 20 cuentas en cinco páginas, sin pérdidas ni duplicados; el lote terminó en 5,804 s. Esa muestra no sustituye la comparación pareada: [benchmark posterior a las correcciones](BENCHMARK_RUST_OPTIMIZED_2026-10-15.md). Las cifras anteriores que siguen debajo se conservan como historial.
 
+Artefacto corregido desplegado y verificado en el staging Rust: versión `b25a5c76-95aa-4918-8299-6fe9e3a49dda`, implementación `5ff18e3`. El navegador remoto pasó en 53,792 s con escritorio/móvil, tres adjuntos SHA-256 iguales, fondo de píxeles iguales, offline/reconexión y recarga. Ráfaga WSS de 30: 327 ms de lote completo, llegada media 279 ms y p95 305 ms, incluida red y sin render DOM. Sync HTTPS exacto, reconexión, revocación sin desconectar al cliente restante y consola owner cifrada aprobados. [Evidencia actual](performance-validation-results.json).
+
 Historial previo a las correcciones: la [primera comparación contra TypeScript](BENCHMARK_TYPESCRIPT_RUST_2026-10-15.md) completó 24 casos y 30.000 mensajes; detectó una regresión del port. Ese informe identifica el artefacto anterior y se conserva para comparar la mejora, sin confundir aprobación funcional con capacidad.
 
 Cierre de implementación y pruebas del 2026-10-15. Las 74 rutas activas están implementadas en Rust y comprobadas localmente; staging independiente desplegado y recorrido funcional remoto aprobado. Implementación publicada y verificada en GitHub: `72a40707384a09bd82421ba3484c0a03fe9f1c90`.
