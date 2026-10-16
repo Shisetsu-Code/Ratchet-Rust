@@ -1,0 +1,1346 @@
+{
+  "at": "2026-10-16T06:17:54.615Z",
+  "measurement": "Single Node monotonic clock, WSS send to recipient callback; same connection and equal 256-byte text. Excludes both application UIs. Sequential individual messages and 8-message bursts; same WSS connections reused; alternating order.",
+  "provenance": {
+    "source": "../sqlite-chat-poc",
+    "hashes": {
+      "worker.mjs": "d10253367ac1821333ae23eefe6860625e7f4d67f39e57c2bf06260d21c89705",
+      "core.mjs": "aeeea200ae6a292cbecb125697d48706394c08f3ee8a92d017a2f5d0cb249469",
+      "client.html": "b7928424ff8b35ceeb46f0b2043632adba0e65775b6667c8037269f966669385"
+    },
+    "code_changes": false,
+    "expires": "2026-10-16T10:15:13.559Z",
+    "base": "https://ratchet-prototype-compare-20261016.braian-n-l.workers.dev"
+  },
+  "rust_base": "https://ratchet-rust-staging-20261015.braian-n-l.workers.dev",
+  "recovery": {
+    "prototype": 56,
+    "rust": 55
+  },
+  "summary": [
+    {
+      "label": "prototype",
+      "mode": "individual",
+      "arrival": {
+        "n": 30,
+        "mean_ms": 204.2206766666667,
+        "p50_ms": 187.4395999999997,
+        "p95_ms": 330.85629999999946,
+        "min_ms": 184.76930000000357,
+        "max_ms": 514.0818999999974
+      },
+      "ack": {
+        "n": 30,
+        "mean_ms": 201.61229000000014,
+        "p50_ms": 184.7598999999973,
+        "p95_ms": 330.77709999999934,
+        "min_ms": 182.54780000000028,
+        "max_ms": 511.85529999999926
+      }
+    },
+    {
+      "label": "prototype",
+      "mode": "burst",
+      "arrival": {
+        "n": 24,
+        "mean_ms": 268.01204166666713,
+        "p50_ms": 258.43069999999716,
+        "p95_ms": 375.8090999999986,
+        "min_ms": 187.72839999999997,
+        "max_ms": 376.14390000000276
+      },
+      "ack": {
+        "n": 24,
+        "mean_ms": 265.88864166666673,
+        "p50_ms": 255.36499999999796,
+        "p95_ms": 375.7534000000014,
+        "min_ms": 185.59509999999864,
+        "max_ms": 376.1301999999996
+      }
+    },
+    {
+      "label": "rust",
+      "mode": "individual",
+      "arrival": {
+        "n": 30,
+        "mean_ms": 187.05792666666633,
+        "p50_ms": 183.21299999999974,
+        "p95_ms": 206.4694999999956,
+        "min_ms": 181.30010000000038,
+        "max_ms": 221.33339999999953
+      },
+      "ack": {
+        "n": 30,
+        "mean_ms": 189.48374666666652,
+        "p50_ms": 185.4882000000016,
+        "p95_ms": 209.29149999999572,
+        "min_ms": 183.77549999999974,
+        "max_ms": 223.6790000000001
+      }
+    },
+    {
+      "label": "rust",
+      "mode": "burst",
+      "arrival": {
+        "n": 24,
+        "mean_ms": 274.8158083333339,
+        "p50_ms": 261.28369999999995,
+        "p95_ms": 339.14560000000347,
+        "min_ms": 205.90159999999742,
+        "max_ms": 339.24229999999807
+      },
+      "ack": {
+        "n": 24,
+        "mean_ms": 279.333554166667,
+        "p50_ms": 265.96689999999944,
+        "p95_ms": 343.8784000000014,
+        "min_ms": 208.15879999999743,
+        "max_ms": 344.0371000000014
+      }
+    }
+  ],
+  "runs": [
+    {
+      "label": "prototype",
+      "round": 0,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 3333,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 190.87881999999973,
+        "p50_ms": 187.95279999999912,
+        "p95_ms": 204.04830000000038,
+        "min_ms": 185.54010000000017,
+        "max_ms": 204.04830000000038
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 187.48310999999975,
+        "p50_ms": 185.09879999999976,
+        "p95_ms": 202.99109999999928,
+        "min_ms": 183.83580000000075,
+        "max_ms": 202.99109999999928
+      },
+      "whole_case_ms": 2052.7144000000008,
+      "rows": [
+        {
+          "id": "ba2ba6e5-cb55-4549-862e-4c91ef0be850",
+          "arrival_ms": 204.04830000000038,
+          "ack_ms": 202.99109999999928,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "4652df75-765c-4ed9-917c-99cf52440580",
+          "arrival_ms": 187.95279999999912,
+          "ack_ms": 188.10019999999895,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "f6a39892-1291-4e11-9cd4-deaa4d03a768",
+          "arrival_ms": 187.57359999999971,
+          "ack_ms": 184.31009999999878,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "2af31c97-58f6-4b2b-b4f7-9880b877b992",
+          "arrival_ms": 191.2425000000003,
+          "ack_ms": 188.25760000000082,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "4cdfbbea-0889-4da3-baae-0e568818ebf0",
+          "arrival_ms": 187.4395999999997,
+          "ack_ms": 185.51469999999972,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "4c9292fb-e7cd-4936-a730-46f84285a909",
+          "arrival_ms": 188.65419999999904,
+          "ack_ms": 185.09879999999976,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "2e726816-5936-450a-a261-9364de6ce39b",
+          "arrival_ms": 187.8293999999987,
+          "ack_ms": 184.99019999999837,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "04c1f1a1-2711-4379-847e-6f69ea625db8",
+          "arrival_ms": 185.54010000000017,
+          "ack_ms": 183.83580000000075,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "5b42e3a5-0bd7-45e5-a021-0a00701b638f",
+          "arrival_ms": 199.27930000000015,
+          "ack_ms": 187.52530000000115,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "0ecfaf50-effa-44cf-ad3c-6730c87db1bc",
+          "arrival_ms": 189.22839999999997,
+          "ack_ms": 184.20730000000003,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 0,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 11872,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 185.28596000000016,
+        "p50_ms": 183.15930000000117,
+        "p95_ms": 203.7510000000002,
+        "min_ms": 181.90949999999975,
+        "max_ms": 203.7510000000002
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 187.72655000000015,
+        "p50_ms": 185.58050000000003,
+        "p95_ms": 206.46039999999994,
+        "min_ms": 183.82859999999891,
+        "max_ms": 206.46039999999994
+      },
+      "whole_case_ms": 2013.3940999999995,
+      "rows": [
+        {
+          "id": "fbf8f031-378d-4956-bd7d-17d1ddbb266b",
+          "arrival_ms": 203.7510000000002,
+          "ack_ms": 206.46039999999994,
+          "server_timing": null
+        },
+        {
+          "id": "48c65356-5f12-472b-abd5-7a1874fcec47",
+          "arrival_ms": 182.50960000000123,
+          "ack_ms": 184.91530000000057,
+          "server_timing": null
+        },
+        {
+          "id": "d6d375ee-db88-4039-9028-9e24c4b13f7d",
+          "arrival_ms": 184.16049999999996,
+          "ack_ms": 187.1205000000009,
+          "server_timing": null
+        },
+        {
+          "id": "4e32ae39-c721-4337-b32a-319635b5af77",
+          "arrival_ms": 183.0552000000007,
+          "ack_ms": 185.4882000000016,
+          "server_timing": null
+        },
+        {
+          "id": "22064c8f-d07c-40c0-b1f8-9b2a0ee7684c",
+          "arrival_ms": 181.90949999999975,
+          "ack_ms": 183.82859999999891,
+          "server_timing": null
+        },
+        {
+          "id": "522c8968-5ede-4ac8-b48c-1064f7fb0864",
+          "arrival_ms": 184.60589999999866,
+          "ack_ms": 186.72569999999905,
+          "server_timing": null
+        },
+        {
+          "id": "557377dc-0da7-46b9-8dbb-2ab65bd18eb5",
+          "arrival_ms": 183.15930000000117,
+          "ack_ms": 185.7434000000012,
+          "server_timing": null
+        },
+        {
+          "id": "68d957f1-416f-497d-8497-da11a48b109e",
+          "arrival_ms": 183.6877000000004,
+          "ack_ms": 185.58050000000003,
+          "server_timing": null
+        },
+        {
+          "id": "e87a67bc-6064-4c32-8e76-775c729de2f0",
+          "arrival_ms": 183.21299999999974,
+          "ack_ms": 186.58729999999923,
+          "server_timing": null
+        },
+        {
+          "id": "4a98cf53-3c04-42d9-b1c2-bd45d82628b9",
+          "arrival_ms": 182.8078999999998,
+          "ack_ms": 184.8155999999999,
+          "server_timing": null
+        }
+      ]
+    },
+    {
+      "label": "prototype",
+      "round": 0,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 2672,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 249.67461249999997,
+        "p50_ms": 240.24309999999969,
+        "p95_ms": 311.88310000000274,
+        "min_ms": 187.72839999999997,
+        "max_ms": 311.88310000000274
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 247.38750000000027,
+        "p50_ms": 238.21039999999994,
+        "p95_ms": 310.042300000001,
+        "min_ms": 185.59509999999864,
+        "max_ms": 310.042300000001
+      },
+      "whole_case_ms": 327.63850000000093,
+      "rows": [
+        {
+          "id": "0bf25240-6734-49be-9672-050487b12d27",
+          "arrival_ms": 187.72839999999997,
+          "ack_ms": 185.59509999999864,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "52396033-963c-4784-a330-79d61cc23014",
+          "arrival_ms": 206.11359999999695,
+          "ack_ms": 204.3076000000001,
+          "server_timing": {
+            "prepare_queue": 17,
+            "sql": 0,
+            "durability": 17,
+            "total": 34
+          }
+        },
+        {
+          "id": "5cdc586c-4427-46e6-a9ce-229bd07bc166",
+          "arrival_ms": 223.53540000000066,
+          "ack_ms": 221.93520000000353,
+          "server_timing": {
+            "prepare_queue": 34,
+            "sql": 0,
+            "durability": 17,
+            "total": 51
+          }
+        },
+        {
+          "id": "5593d924-44e8-4e05-b6bd-de21846f8d9a",
+          "arrival_ms": 240.24309999999969,
+          "ack_ms": 238.21039999999994,
+          "server_timing": {
+            "prepare_queue": 51,
+            "sql": 0,
+            "durability": 17,
+            "total": 68
+          }
+        },
+        {
+          "id": "8042041d-396b-468a-894a-0b9178e99577",
+          "arrival_ms": 258.43069999999716,
+          "ack_ms": 255.36499999999796,
+          "server_timing": {
+            "prepare_queue": 68,
+            "sql": 0,
+            "durability": 17,
+            "total": 85
+          }
+        },
+        {
+          "id": "eaadae99-d14f-4a07-b148-c6b140443731",
+          "arrival_ms": 275.2463000000025,
+          "ack_ms": 272.87590000000273,
+          "server_timing": {
+            "prepare_queue": 85,
+            "sql": 0,
+            "durability": 17,
+            "total": 102
+          }
+        },
+        {
+          "id": "6ba3035a-a2d0-4980-9367-bddccc7c6563",
+          "arrival_ms": 294.21630000000005,
+          "ack_ms": 290.7684999999983,
+          "server_timing": {
+            "prepare_queue": 102,
+            "sql": 0,
+            "durability": 17,
+            "total": 119
+          }
+        },
+        {
+          "id": "e40f4677-88d7-48d9-ad9a-2864d18128eb",
+          "arrival_ms": 311.88310000000274,
+          "ack_ms": 310.042300000001,
+          "server_timing": {
+            "prepare_queue": 119,
+            "sql": 0,
+            "durability": 18,
+            "total": 137
+          }
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 0,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 9504,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 256.3199000000004,
+        "p50_ms": 261.28369999999995,
+        "p95_ms": 262.0011000000013,
+        "min_ms": 227.90550000000076,
+        "max_ms": 262.0011000000013
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 261.6579124999994,
+        "p50_ms": 265.96689999999944,
+        "p95_ms": 266.71779999999853,
+        "min_ms": 230.1296000000002,
+        "max_ms": 266.71779999999853
+      },
+      "whole_case_ms": 277.33859999999913,
+      "rows": [
+        {
+          "id": "2969d7bc-e276-4b74-a12e-b5c01f423add",
+          "arrival_ms": 227.90550000000076,
+          "ack_ms": 230.1296000000002,
+          "server_timing": null
+        },
+        {
+          "id": "ad072ca7-68af-4be0-a9b8-2954c507d389",
+          "arrival_ms": 256.85759999999937,
+          "ack_ms": 266.71779999999853,
+          "server_timing": null
+        },
+        {
+          "id": "421bb8f6-8d46-4313-9c38-41192dd5f884",
+          "arrival_ms": 256.9939999999988,
+          "ack_ms": 266.55079999999725,
+          "server_timing": null
+        },
+        {
+          "id": "f64cd6e6-6553-476d-9989-bee36eaf1a75",
+          "arrival_ms": 261.28369999999995,
+          "ack_ms": 266.2556000000004,
+          "server_timing": null
+        },
+        {
+          "id": "f2f94909-a145-453b-bd13-b493a3184830",
+          "arrival_ms": 261.7373000000007,
+          "ack_ms": 266.1430999999975,
+          "server_timing": null
+        },
+        {
+          "id": "8070791f-b9f2-43df-8993-a96471af71ed",
+          "arrival_ms": 261.8519000000015,
+          "ack_ms": 265.96689999999944,
+          "server_timing": null
+        },
+        {
+          "id": "d59a12e3-dc50-4262-8d8b-04bdedbd0abf",
+          "arrival_ms": 261.928100000001,
+          "ack_ms": 265.82730000000083,
+          "server_timing": null
+        },
+        {
+          "id": "b02a1770-d2fd-4066-928c-6666b0a79cbd",
+          "arrival_ms": 262.0011000000013,
+          "ack_ms": 265.6722000000009,
+          "server_timing": null
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 1,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 11880,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 190.63646999999983,
+        "p50_ms": 183.257999999998,
+        "p95_ms": 221.33339999999953,
+        "min_ms": 181.30010000000038,
+        "max_ms": 221.33339999999953
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 192.98205000000016,
+        "p50_ms": 185.3888999999981,
+        "p95_ms": 223.6790000000001,
+        "min_ms": 183.77549999999974,
+        "max_ms": 223.6790000000001
+      },
+      "whole_case_ms": 2085.205100000003,
+      "rows": [
+        {
+          "id": "3c008ecf-d2e3-426c-9d7b-cfdc4558291f",
+          "arrival_ms": 202.8179999999993,
+          "ack_ms": 206.98159999999916,
+          "server_timing": null
+        },
+        {
+          "id": "e163cca0-e3ab-4e94-9427-c5d1d1f828ec",
+          "arrival_ms": 183.35619999999835,
+          "ack_ms": 184.59809999999925,
+          "server_timing": null
+        },
+        {
+          "id": "3d56a575-a241-4620-8425-90ea370e60cf",
+          "arrival_ms": 183.24229999999807,
+          "ack_ms": 185.45679999999993,
+          "server_timing": null
+        },
+        {
+          "id": "43390a96-a19e-475b-a14c-906ee266272e",
+          "arrival_ms": 182.14120000000185,
+          "ack_ms": 184.14749999999913,
+          "server_timing": null
+        },
+        {
+          "id": "b673f78e-7be4-4ce6-bd2b-87957ff0052d",
+          "arrival_ms": 181.30010000000038,
+          "ack_ms": 183.77549999999974,
+          "server_timing": null
+        },
+        {
+          "id": "b21c15af-4135-4f25-8a9e-e09b86b196ec",
+          "arrival_ms": 201.5087999999996,
+          "ack_ms": 203.6273000000001,
+          "server_timing": null
+        },
+        {
+          "id": "d62bde15-6785-45ed-9da5-78dcf6a3fedf",
+          "arrival_ms": 183.257999999998,
+          "ack_ms": 185.3888999999981,
+          "server_timing": null
+        },
+        {
+          "id": "d5225e63-ac7a-4ae5-b358-dcc278e58268",
+          "arrival_ms": 182.57120000000214,
+          "ack_ms": 184.8589000000029,
+          "server_timing": null
+        },
+        {
+          "id": "bb27ae14-a3df-48e9-b48b-cc444a99e85b",
+          "arrival_ms": 184.83550000000105,
+          "ack_ms": 187.30690000000322,
+          "server_timing": null
+        },
+        {
+          "id": "1e611aba-10de-48c2-ac47-a830599d7312",
+          "arrival_ms": 221.33339999999953,
+          "ack_ms": 223.6790000000001,
+          "server_timing": null
+        }
+      ]
+    },
+    {
+      "label": "prototype",
+      "round": 1,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 3340,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 233.85323000000062,
+        "p50_ms": 186.38820000000123,
+        "p95_ms": 514.0818999999974,
+        "min_ms": 184.76930000000357,
+        "max_ms": 514.0818999999974
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 231.53763000000035,
+        "p50_ms": 183.68570000000182,
+        "p95_ms": 511.85529999999926,
+        "min_ms": 182.54780000000028,
+        "max_ms": 511.85529999999926
+      },
+      "whole_case_ms": 2481.1584000000003,
+      "rows": [
+        {
+          "id": "6f9f5f26-bcf7-4824-8b52-4629bfc6010c",
+          "arrival_ms": 186.20170000000144,
+          "ack_ms": 183.92120000000068,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "0e8c7491-f4ad-4687-85d7-1e4b4ddb1aae",
+          "arrival_ms": 186.38820000000123,
+          "ack_ms": 183.68570000000182,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "c2665a22-d0be-4abb-af38-71a32b956ba7",
+          "arrival_ms": 184.90740000000005,
+          "ack_ms": 182.54780000000028,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "c512735d-ed88-4dc7-b2ba-b5bf681d9e59",
+          "arrival_ms": 191.59410000000207,
+          "ack_ms": 189.01699999999983,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 22,
+            "total": 22
+          }
+        },
+        {
+          "id": "22360e73-e67a-4d1f-96ac-f97cf119e2d6",
+          "arrival_ms": 186.95769999999902,
+          "ack_ms": 183.3817999999992,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "5ce36772-f265-4580-a8d9-d6add51dc32d",
+          "arrival_ms": 514.0818999999974,
+          "ack_ms": 511.85529999999926,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 347,
+            "total": 347
+          }
+        },
+        {
+          "id": "f284d57c-f1f8-4c28-bde0-7abbc6c9199c",
+          "arrival_ms": 330.85629999999946,
+          "ack_ms": 330.77709999999934,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 163,
+            "total": 163
+          }
+        },
+        {
+          "id": "b4227e6f-65e1-4983-b0f9-2748f29ead40",
+          "arrival_ms": 186.62840000000142,
+          "ack_ms": 183.89740000000165,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "b9457d3c-597d-4679-a915-97aa3a1b2d36",
+          "arrival_ms": 184.76930000000357,
+          "ack_ms": 182.65950000000157,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 16,
+            "total": 16
+          }
+        },
+        {
+          "id": "70df5f7a-a226-4124-bfec-73c1f61c2b42",
+          "arrival_ms": 186.14730000000054,
+          "ack_ms": 183.6334999999999,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 1,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 9504,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 233.63603749999993,
+        "p50_ms": 236.8654000000024,
+        "p95_ms": 239.22589999999764,
+        "min_ms": 205.90159999999742,
+        "max_ms": 239.22589999999764
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 237.48812499999985,
+        "p50_ms": 241.57560000000012,
+        "p95_ms": 242.01959999999963,
+        "min_ms": 208.15879999999743,
+        "max_ms": 242.01959999999963
+      },
+      "whole_case_ms": 249.4903000000013,
+      "rows": [
+        {
+          "id": "935bb418-f5bf-4fd3-ad4f-7d3ce2172bb7",
+          "arrival_ms": 205.90159999999742,
+          "ack_ms": 208.15879999999743,
+          "server_timing": null
+        },
+        {
+          "id": "c4ce18cd-17c2-4e1f-9814-41d070e727b1",
+          "arrival_ms": 236.63930000000255,
+          "ack_ms": 242.01959999999963,
+          "server_timing": null
+        },
+        {
+          "id": "1e8f0914-f396-4126-8bd1-252e1a90ef18",
+          "arrival_ms": 236.72699999999895,
+          "ack_ms": 241.90799999999945,
+          "server_timing": null
+        },
+        {
+          "id": "df7e091b-2883-4fae-8b16-ea8545accc11",
+          "arrival_ms": 236.8654000000024,
+          "ack_ms": 241.78100000000268,
+          "server_timing": null
+        },
+        {
+          "id": "a3962887-a56a-466c-912b-e9e6f2cc488f",
+          "arrival_ms": 237.21970000000147,
+          "ack_ms": 241.674500000001,
+          "server_timing": null
+        },
+        {
+          "id": "8cde2d86-5a61-4286-a970-4549c8aab86e",
+          "arrival_ms": 237.41129999999976,
+          "ack_ms": 241.57560000000012,
+          "server_timing": null
+        },
+        {
+          "id": "186c5da5-09cd-4c7a-bf29-32f55b9e0ddc",
+          "arrival_ms": 239.09809999999925,
+          "ack_ms": 241.45850000000064,
+          "server_timing": null
+        },
+        {
+          "id": "ee385773-619a-4a39-81b8-06a9a4b5b2b3",
+          "arrival_ms": 239.22589999999764,
+          "ack_ms": 241.3289999999979,
+          "server_timing": null
+        }
+      ]
+    },
+    {
+      "label": "prototype",
+      "round": 1,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 2672,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 258.8842875,
+        "p50_ms": 249.52520000000004,
+        "p95_ms": 320.9534999999996,
+        "min_ms": 195.59899999999834,
+        "max_ms": 320.9534999999996
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 256.6401000000001,
+        "p50_ms": 246.9392000000007,
+        "p95_ms": 318.6548999999977,
+        "min_ms": 193.65220000000045,
+        "max_ms": 318.6548999999977
+      },
+      "whole_case_ms": 328.0258999999969,
+      "rows": [
+        {
+          "id": "4b1ab95f-fbd5-4a58-ac23-1c3b60f1c8cf",
+          "arrival_ms": 195.59899999999834,
+          "ack_ms": 193.65220000000045,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 24,
+            "total": 24
+          }
+        },
+        {
+          "id": "70612eb0-8f10-49c9-9166-3182563f53c9",
+          "arrival_ms": 212.71080000000075,
+          "ack_ms": 210.9434000000001,
+          "server_timing": {
+            "prepare_queue": 24,
+            "sql": 0,
+            "durability": 18,
+            "total": 42
+          }
+        },
+        {
+          "id": "a2af871f-b762-4eea-a92e-92067ce41717",
+          "arrival_ms": 230.4829000000027,
+          "ack_ms": 228.81360000000132,
+          "server_timing": {
+            "prepare_queue": 42,
+            "sql": 0,
+            "durability": 17,
+            "total": 59
+          }
+        },
+        {
+          "id": "55da8c03-f2a4-40e9-b7c3-73d9a8271f8a",
+          "arrival_ms": 249.52520000000004,
+          "ack_ms": 246.9392000000007,
+          "server_timing": {
+            "prepare_queue": 59,
+            "sql": 0,
+            "durability": 17,
+            "total": 76
+          }
+        },
+        {
+          "id": "0b59cf69-cf15-4a92-af80-366503706453",
+          "arrival_ms": 268.8798999999999,
+          "ack_ms": 266.2390000000014,
+          "server_timing": {
+            "prepare_queue": 76,
+            "sql": 0,
+            "durability": 20,
+            "total": 96
+          }
+        },
+        {
+          "id": "8928fc73-faeb-4bdf-81cf-7032107390f4",
+          "arrival_ms": 288.60579999999754,
+          "ack_ms": 285.84479999999894,
+          "server_timing": {
+            "prepare_queue": 96,
+            "sql": 0,
+            "durability": 17,
+            "total": 113
+          }
+        },
+        {
+          "id": "d42d882a-fc6e-40de-82d5-51e9e65b41c4",
+          "arrival_ms": 304.3172000000013,
+          "ack_ms": 302.03369999999995,
+          "server_timing": {
+            "prepare_queue": 113,
+            "sql": 0,
+            "durability": 17,
+            "total": 130
+          }
+        },
+        {
+          "id": "87ff8af6-3ca2-4cfd-bab0-a677b1b43080",
+          "arrival_ms": 320.9534999999996,
+          "ack_ms": 318.6548999999977,
+          "server_timing": {
+            "prepare_queue": 130,
+            "sql": 0,
+            "durability": 17,
+            "total": 147
+          }
+        }
+      ]
+    },
+    {
+      "label": "prototype",
+      "round": 2,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 3340,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 187.92997999999972,
+        "p50_ms": 186.63990000000194,
+        "p95_ms": 196.36809999999969,
+        "min_ms": 185.1381999999976,
+        "max_ms": 196.36809999999969
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 185.81613000000033,
+        "p50_ms": 184.7598999999973,
+        "p95_ms": 194.20230000000083,
+        "min_ms": 183.61799999999857,
+        "max_ms": 194.20230000000083
+      },
+      "whole_case_ms": 1987.9759000000013,
+      "rows": [
+        {
+          "id": "710a755b-ed82-4d3c-a6db-07d0ea5b2089",
+          "arrival_ms": 186.0476000000017,
+          "ack_ms": 184.14380000000165,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "59135ed5-6cb6-41df-ae76-d74f85e2faf7",
+          "arrival_ms": 185.83390000000145,
+          "ack_ms": 184.0385000000024,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "9445e35e-9fc3-4868-9a7c-22eca7c1111d",
+          "arrival_ms": 188.12829999999667,
+          "ack_ms": 186.3982999999971,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "136e7161-ac44-424e-9b6f-98889f361657",
+          "arrival_ms": 186.97820000000138,
+          "ack_ms": 185.52839999999924,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 19,
+            "total": 19
+          }
+        },
+        {
+          "id": "4c49f2cd-73b4-41ed-a68b-d1b724795e73",
+          "arrival_ms": 185.1381999999976,
+          "ack_ms": 183.61799999999857,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "7198a1fc-e464-4e40-b95d-10c1bdcfb243",
+          "arrival_ms": 190.01729999999952,
+          "ack_ms": 185.82280000000173,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 17,
+            "total": 17
+          }
+        },
+        {
+          "id": "d8d1c5ef-799e-48a7-8922-e8fd6501c1e6",
+          "arrival_ms": 186.33429999999862,
+          "ack_ms": 184.7598999999973,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "5cedb9d4-7168-41c6-829b-6a7235731b63",
+          "arrival_ms": 186.63990000000194,
+          "ack_ms": 184.17860000000292,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        },
+        {
+          "id": "3f7d1f34-1961-4487-887a-a2cc185731cf",
+          "arrival_ms": 196.36809999999969,
+          "ack_ms": 194.20230000000083,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 19,
+            "total": 19
+          }
+        },
+        {
+          "id": "4a9ccdd8-0398-4d48-a117-6af60696da46",
+          "arrival_ms": 187.8139999999985,
+          "ack_ms": 185.47070000000167,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 18,
+            "total": 18
+          }
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 2,
+      "mode": "individual",
+      "count": 10,
+      "payload_text_bytes": 256,
+      "wire_bytes": 11880,
+      "arrival": {
+        "n": 10,
+        "mean_ms": 185.251349999999,
+        "p50_ms": 182.89970000000176,
+        "p95_ms": 206.4694999999956,
+        "min_ms": 181.76550000000134,
+        "max_ms": 206.4694999999956
+      },
+      "ack": {
+        "n": 10,
+        "mean_ms": 187.7426399999993,
+        "p50_ms": 185.31029999999737,
+        "p95_ms": 209.29149999999572,
+        "min_ms": 184.29839999999967,
+        "max_ms": 209.29149999999572
+      },
+      "whole_case_ms": 2017.6074000000008,
+      "rows": [
+        {
+          "id": "ceb9ca89-ec43-4e33-a0bd-a594c9547260",
+          "arrival_ms": 206.4694999999956,
+          "ack_ms": 209.29149999999572,
+          "server_timing": null
+        },
+        {
+          "id": "9b63f8e1-eb54-4b1b-9679-3740c47529ae",
+          "arrival_ms": 181.76550000000134,
+          "ack_ms": 185.31029999999737,
+          "server_timing": null
+        },
+        {
+          "id": "bad2f8ae-9c7c-46d2-9eff-e45a187b4970",
+          "arrival_ms": 182.89970000000176,
+          "ack_ms": 184.77330000000075,
+          "server_timing": null
+        },
+        {
+          "id": "94bf6531-346a-46a6-8527-ad94e4a90b60",
+          "arrival_ms": 182.60519999999815,
+          "ack_ms": 185.0376000000033,
+          "server_timing": null
+        },
+        {
+          "id": "d9683b88-c04d-4991-bdd1-c6cd08dc7320",
+          "arrival_ms": 183.28369999999995,
+          "ack_ms": 185.59979999999632,
+          "server_timing": null
+        },
+        {
+          "id": "f871a12d-ad01-4d72-9f7a-415d453fc14b",
+          "arrival_ms": 183.63390000000072,
+          "ack_ms": 186.25910000000295,
+          "server_timing": null
+        },
+        {
+          "id": "f069d7a0-0d86-49a8-9c55-318eaf541478",
+          "arrival_ms": 182.64189999999508,
+          "ack_ms": 184.9585999999981,
+          "server_timing": null
+        },
+        {
+          "id": "ff5fb71e-4159-412e-a716-612960fc9c5d",
+          "arrival_ms": 181.96650000000227,
+          "ack_ms": 184.29839999999967,
+          "server_timing": null
+        },
+        {
+          "id": "edad4d1d-2bb9-42f2-b0ba-aedbbac05b10",
+          "arrival_ms": 184.04889999999432,
+          "ack_ms": 186.28889999999956,
+          "server_timing": null
+        },
+        {
+          "id": "0231e1be-0ae9-4a02-8e48-fbeed6a0e0b8",
+          "arrival_ms": 183.19870000000083,
+          "ack_ms": 185.60889999999927,
+          "server_timing": null
+        }
+      ]
+    },
+    {
+      "label": "prototype",
+      "round": 2,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 2672,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 295.47722500000145,
+        "p50_ms": 281.65409999999974,
+        "p95_ms": 376.14390000000276,
+        "min_ms": 199.36880000000383,
+        "max_ms": 376.14390000000276
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 293.6383249999999,
+        "p50_ms": 278.5795999999973,
+        "p95_ms": 376.1301999999996,
+        "min_ms": 197.4253000000026,
+        "max_ms": 376.1301999999996
+      },
+      "whole_case_ms": 387.1339999999982,
+      "rows": [
+        {
+          "id": "c204ea98-7bce-4cb5-adb6-fb8ede69a12e",
+          "arrival_ms": 199.36880000000383,
+          "ack_ms": 197.4253000000026,
+          "server_timing": {
+            "prepare_queue": 0,
+            "sql": 0,
+            "durability": 29,
+            "total": 29
+          }
+        },
+        {
+          "id": "247b9953-f7be-428a-8382-4f90e288bcff",
+          "arrival_ms": 232.48300000000017,
+          "ack_ms": 229.97899999999936,
+          "server_timing": {
+            "prepare_queue": 29,
+            "sql": 0,
+            "durability": 33,
+            "total": 62
+          }
+        },
+        {
+          "id": "2d0d895b-521b-4b29-bcda-533dd79d6eac",
+          "arrival_ms": 256.502800000002,
+          "ack_ms": 254.55719999999565,
+          "server_timing": {
+            "prepare_queue": 62,
+            "sql": 0,
+            "durability": 25,
+            "total": 87
+          }
+        },
+        {
+          "id": "26647115-feaf-4f50-9626-bb015c0fc7e7",
+          "arrival_ms": 281.65409999999974,
+          "ack_ms": 278.5795999999973,
+          "server_timing": {
+            "prepare_queue": 87,
+            "sql": 0,
+            "durability": 22,
+            "total": 109
+          }
+        },
+        {
+          "id": "013087a2-74aa-45f5-9efb-d6725148257b",
+          "arrival_ms": 309.8651000000027,
+          "ack_ms": 306.56840000000375,
+          "server_timing": {
+            "prepare_queue": 109,
+            "sql": 0,
+            "durability": 29,
+            "total": 138
+          }
+        },
+        {
+          "id": "9f7fa6c8-8cbb-4c50-8713-480bdb51adcf",
+          "arrival_ms": 331.9910000000018,
+          "ack_ms": 330.1134999999995,
+          "server_timing": {
+            "prepare_queue": 138,
+            "sql": 0,
+            "durability": 22,
+            "total": 160
+          }
+        },
+        {
+          "id": "94c647e0-04e3-450e-96f1-6de6b4a7d735",
+          "arrival_ms": 375.8090999999986,
+          "ack_ms": 375.7534000000014,
+          "server_timing": {
+            "prepare_queue": 160,
+            "sql": 0,
+            "durability": 20,
+            "total": 180
+          }
+        },
+        {
+          "id": "05aba881-92a6-481d-a3c3-2ed9ef36213e",
+          "arrival_ms": 376.14390000000276,
+          "ack_ms": 376.1301999999996,
+          "server_timing": {
+            "prepare_queue": 180,
+            "sql": 0,
+            "durability": 17,
+            "total": 197
+          }
+        }
+      ]
+    },
+    {
+      "label": "rust",
+      "round": 2,
+      "mode": "burst",
+      "count": 8,
+      "payload_text_bytes": 256,
+      "wire_bytes": 9504,
+      "arrival": {
+        "n": 8,
+        "mean_ms": 334.4914875000013,
+        "p50_ms": 338.76780000000144,
+        "p95_ms": 339.24229999999807,
+        "min_ms": 303.70590000000084,
+        "max_ms": 339.24229999999807
+      },
+      "ack": {
+        "n": 8,
+        "mean_ms": 338.85462500000176,
+        "p50_ms": 343.46390000000247,
+        "p95_ms": 344.0371000000014,
+        "min_ms": 305.6594000000041,
+        "max_ms": 344.0371000000014
+      },
+      "whole_case_ms": 353.90819999999803,
+      "rows": [
+        {
+          "id": "989f3af1-20b2-46dd-b79a-393e2507ceda",
+          "arrival_ms": 303.70590000000084,
+          "ack_ms": 305.6594000000041,
+          "server_timing": null
+        },
+        {
+          "id": "1c98afee-4749-4acd-84a9-6891fcd6bd67",
+          "arrival_ms": 338.4855000000025,
+          "ack_ms": 344.0371000000014,
+          "server_timing": null
+        },
+        {
+          "id": "d8e344cb-81e7-47d7-9e9f-e981bd3c9ce8",
+          "arrival_ms": 338.681700000001,
+          "ack_ms": 343.8784000000014,
+          "server_timing": null
+        },
+        {
+          "id": "eb5008dc-ff17-472e-a4df-8b0aaa57c65d",
+          "arrival_ms": 338.76780000000144,
+          "ack_ms": 343.7279000000053,
+          "server_timing": null
+        },
+        {
+          "id": "7a05b607-e8b9-4d5a-a21a-172f30b8234e",
+          "arrival_ms": 338.8732999999993,
+          "ack_ms": 343.60050000000047,
+          "server_timing": null
+        },
+        {
+          "id": "f78111ed-f698-4556-a583-20a24a7459ad",
+          "arrival_ms": 339.0298000000039,
+          "ack_ms": 343.46390000000247,
+          "server_timing": null
+        },
+        {
+          "id": "dbdcde14-2551-4285-b38d-e7370055a8a7",
+          "arrival_ms": 339.14560000000347,
+          "ack_ms": 343.34300000000076,
+          "server_timing": null
+        },
+        {
+          "id": "ef7fb663-6900-44fd-8f95-16c4bc0c1ae4",
+          "arrival_ms": 339.24229999999807,
+          "ack_ms": 343.1267999999982,
+          "server_timing": null
+        }
+      ]
+    }
+  ]
+}
