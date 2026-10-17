@@ -20,15 +20,23 @@ export async function getDecryptedAttachmentMetadata(chatId: string, descriptor:
 
 export function createDecryptedAttachmentStream(chatId: string, descriptor: AttachmentDescriptor, signal?: AbortSignal): ReadableStream<Uint8Array> {
   assertSafeDescriptor(descriptor);
+  const abort = new AbortController();
+  const forwardAbort = () => abort.abort(signal?.reason);
+  if (signal?.aborted) forwardAbort();
+  else signal?.addEventListener('abort', forwardAbort, { once: true });
+  const cleanup = () => signal?.removeEventListener('abort', forwardAbort);
+  let cancelled = false;
   let partNumber = 1;
   const partCount = attachmentPartCount(descriptor.plaintext_size);
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       if (partNumber > partCount) {
+        cleanup();
         controller.close();
         return;
       }
       try {
+        abort.signal.throwIfAborted();
         const fullCipherChunk = ATTACHMENT_CHUNK_PLAINTEXT_BYTES + ATTACHMENT_TAG_BYTES;
         const start = (partNumber - 1) * fullCipherChunk;
         const plaintextLength = partNumber < partCount
@@ -39,12 +47,13 @@ export function createDecryptedAttachmentStream(chatId: string, descriptor: Atta
         const response = await fetch(`/api/v1/attachments/${descriptor.file_id}/content`, {
           credentials: 'same-origin',
           headers: { Range: `bytes=${start}-${end}` },
-          ...(signal ? { signal } : {}),
+          signal: abort.signal,
         });
         if (response.status !== 206 && !(partCount === 1 && response.status === 200)) throw new Error(`Attachment range download failed (${response.status})`);
         const ciphertext = await readResponseBytes(response, ciphertextLength);
         if (ciphertext.length !== ciphertextLength) throw new Error('Attachment range length mismatch');
         try {
+          abort.signal.throwIfAborted();
           const plaintext = decryptAttachmentPart(chatId, descriptor, partNumber, ciphertext);
           controller.enqueue(plaintext);
         } finally {
@@ -52,10 +61,16 @@ export function createDecryptedAttachmentStream(chatId: string, descriptor: Atta
         }
         partNumber += 1;
       } catch (error) {
-        controller.error(error);
+        cleanup();
+        if (!cancelled) controller.error(error);
       }
     },
-  });
+    cancel(reason) {
+      cancelled = true;
+      abort.abort(reason);
+      cleanup();
+    },
+  }, { highWaterMark: 0 });
 }
 
 function assertSafeDescriptor(descriptor: AttachmentDescriptor): void {

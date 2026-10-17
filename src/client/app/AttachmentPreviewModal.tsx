@@ -14,15 +14,17 @@ export function AttachmentPreviewModal({ source, onClose }: { source: Attachment
   useEffect(() => {
     const abort = new AbortController();
     let url: string | null = null;
+    let resource: LoadedAttachment | null = null;
     setAttachment(null);
     setObjectUrl(null);
     setError(null);
     const load = source.kind === 'local'
-      ? loadLocalAttachment(source.file)
+      ? loadLocalAttachment(source.file, abort.signal)
       : loadDecryptedAttachment(source.chatId, source.descriptor, abort.signal);
     void load.then((loaded) => {
-      if (abort.signal.aborted) return;
-      url = URL.createObjectURL(loaded.blob);
+      if (abort.signal.aborted) { loaded.release(); return; }
+      resource = loaded;
+      url = loaded.preview.allowed ? URL.createObjectURL(loaded.blob) : null;
       setAttachment(loaded);
       setObjectUrl(url);
     }).catch((cause: unknown) => {
@@ -31,6 +33,7 @@ export function AttachmentPreviewModal({ source, onClose }: { source: Attachment
     return () => {
       abort.abort();
       if (url) URL.revokeObjectURL(url);
+      resource?.release();
     };
   }, [source]);
 
@@ -47,7 +50,8 @@ export function AttachmentPreviewModal({ source, onClose }: { source: Attachment
         <button className="icon-button" onClick={onClose} aria-label="Cerrar vista previa">×</button>
       </header>
       <div className="attachment-preview-content">
-        {!objectUrl && !error && <p role="status">Descifrando y verificando el archivo…</p>}
+        {!attachment && !error && <p role="status">Descifrando y verificando el archivo…</p>}
+        {attachment && !attachment.preview.allowed && <p role="note">{attachment.preview.reason}</p>}
         {error && <div className="attachment-preview-error" role="alert"><strong>No se puede mostrar este archivo.</strong><p>{error}</p></div>}
         {objectUrl && !error && attachment?.type.startsWith('image/') && <img src={objectUrl} alt={attachment.name} onError={() => setError('El navegador no pudo decodificar la imagen. El archivo puede estar dañado.')} />}
         {objectUrl && attachment?.type === 'application/pdf' && <iframe src={objectUrl} title={attachment.name} sandbox="" referrerPolicy="no-referrer" />}

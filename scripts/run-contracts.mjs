@@ -3,6 +3,7 @@ import {createWriteStream} from 'node:fs';
 import {readFile,writeFile,unlink,mkdir,rm,readdir} from 'node:fs/promises';
 import {resolve,dirname,basename} from 'node:path';
 import {randomBytes,randomUUID} from 'node:crypto';
+import {assertLocalMigrations} from './contract-migrations.mjs';
 
 const root=process.cwd();
 // Keep SQLite paths below Windows' path limits after workerd appends its hashes.
@@ -22,8 +23,11 @@ try {
   secretsChanged=true;
   await mkdir(state,{recursive:true});
   serverLog=createWriteStream(resolve(state,'server.log'));
+  const expectedMigrations=(await readdir('db/migrations')).filter(name=>name.endsWith('.sql')).sort();
   const migration=spawnSync(process.execPath,[wrangler,'d1','migrations','apply','DB','--local','--config','wrangler.local.jsonc','--persist-to',state],{cwd:root,env,encoding:'utf8',windowsHide:true});
+  await writeFile(resolve(state,'migrations.log'),`Expected: ${expectedMigrations.join(', ')}\nExit: ${migration.status}; signal: ${migration.signal}\n${migration.error?.message??''}\n${migration.stdout??''}\n${migration.stderr??''}`);
   if(migration.status!==0)throw new Error('Local migrations failed:\n'+migration.stdout+'\n'+migration.stderr);
+  await assertLocalMigrations(state,expectedMigrations);
   child=spawn(process.execPath,[wrangler,'dev','--config','wrangler.local.jsonc','--local','--port','8797','--persist-to',state],{cwd:root,env,stdio:['ignore','pipe','pipe'],windowsHide:true});
   const collect=data=>{logs=(logs+data.toString()).slice(-30000);serverLog.write(data);};child.stdout.on('data',collect);child.stderr.on('data',collect);
   let ready=false;
@@ -33,6 +37,7 @@ try {
     await new Promise(resolve=>setTimeout(resolve,200));
   }
   if(!ready)throw new Error('Local Worker did not become ready:\n'+logs);
+  await assertLocalMigrations(state,expectedMigrations);
   const targets=process.argv.slice(2).length?process.argv.slice(2):(await readdir('tests/contracts')).filter(name=>name.endsWith('.mjs')&&name!=='fixtures.mjs').sort().map(name=>'tests/contracts/'+name);
   const tests=spawn(process.execPath,['--test','--test-concurrency=1',...targets],{cwd:root,env:{...env,RATCHET_TEST_BASE:base,RATCHET_TEST_BOOTSTRAP_TOKEN:token,RATCHET_TEST_STATE:state},stdio:'inherit',windowsHide:true});
   const exit=await new Promise(resolve=>tests.on('exit',resolve));

@@ -42,6 +42,16 @@ export async function openLocalDatabase(onState?: (state: LocalDatabaseState) =>
         if (oldVersion < 3) {
           transaction.objectStore('encrypted_cache').createIndex('by-chat-revision', ['chat_id', 'revision']);
         }
+        if (oldVersion < 4) {
+          const timeline = database.createObjectStore('message_timeline', { keyPath: 'timeline_key' });
+          timeline.createIndex('by-chat-visible-revision', ['chat_id', 'visible', 'revision']);
+          const outbox = transaction.objectStore('pending_outbox');
+          outbox.createIndex('by-chat-status', ['chat_id', 'status']);
+          outbox.createIndex('by-chat-status-sequence', ['chat_id', 'status', 'request.sender_sequence']);
+          outbox.createIndex('by-chat-device-status-sequence', ['chat_id', 'sender_device_id', 'status', 'request.sender_sequence']);
+          // Encrypted history is migrated in bounded, resumable batches after
+          // opening; WebCrypto must never run inside an upgrade transaction.
+        }
       },
       blocked() {
         onState?.('BLOCKED');

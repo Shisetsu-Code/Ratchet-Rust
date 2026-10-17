@@ -52,7 +52,7 @@ async fn discard(db: &Db, bucket: &Bucket, row: &Value) -> ApiResult<()> {
 async fn ready(db: &Db, bucket: &Bucket, auth: &AuthContext, row: &Value) -> ApiResult<()> {
     let mut values = authority_values(auth, text(row, "chat_id")?);
     values.push(row["file_id"].clone());
-    let result=changed(db,&format!("UPDATE attachment_uploads SET status='READY' WHERE file_id=?5 AND owner_user_id=?2 AND status IN ('UPLOADING','READY') AND {AUTHORITY}"),&values).await;
+    let result=changed(db,&format!("UPDATE attachment_uploads SET status='READY',quota_size=NULL WHERE file_id=?5 AND owner_user_id=?2 AND status IN ('UPLOADING','READY') AND {AUTHORITY}"),&values).await;
     match result {
         Ok(true) => Ok(()),
         result => {
@@ -63,6 +63,26 @@ async fn ready(db: &Db, bucket: &Bucket, auth: &AuthContext, row: &Value) -> Api
             }
         }
     }
+}
+
+// One durable writer per object. Cleanup never releases capacity while this marker
+// exists, including when a request is cancelled between R2 and D1 completion.
+async fn begin_write(db: &Db, auth: &AuthContext, row: &Value, kind: &str) -> ApiResult<String> {
+    let token = format!("{kind}:{}", crate::http::random_id()?);
+    let mut values = authority_values(auth, text(row, "chat_id")?);
+    values.extend([row["file_id"].clone(), json!(token), json!(now_iso())]);
+    if !changed(db, &format!("UPDATE attachment_uploads SET write_token=?6 WHERE file_id=?5 AND status='UPLOADING' AND write_token IS NULL AND cleaned_at IS NULL AND expires_at>?7 AND {AUTHORITY}"), &values).await? {
+        return Err(ApiError::retryable("ATTACHMENT_WRITE_IN_PROGRESS", 409));
+    }
+    Ok(token)
+}
+async fn finish_write(db: &Db, id: &str, token: &str) -> ApiResult<()> {
+    db.run(
+        "UPDATE attachment_uploads SET write_token=NULL WHERE file_id=?1 AND write_token=?2",
+        &[json!(id), json!(token)],
+    )
+    .await?;
+    Ok(())
 }
 
 pub async fn handle(
@@ -100,21 +120,14 @@ pub async fn handle(
             json!(now),
             json!(expires),
         ]);
-        let reservation=db.0.batch(vec![db.statement(&format!("INSERT INTO attachment_uploads(file_id,upload_id,object_key,owner_user_id,chat_id,status,size,created_at,expires_at) SELECT ?5,NULL,?6,?2,?1,'RESERVED',?7,?8,?9 WHERE (SELECT COUNT(*) FROM attachment_uploads WHERE owner_user_id=?2 AND status IN ('RESERVED','UPLOADING','READY') AND expires_at>?8)<16 AND COALESCE((SELECT SUM(size) FROM attachment_uploads WHERE owner_user_id=?2 AND status IN ('RESERVED','UPLOADING','READY') AND expires_at>?8),0)+?7<=1073741824 AND {AUTHORITY}"),&values)?,db.statement("INSERT INTO attachments(file_id,message_id,encrypted_metadata,created_at) SELECT ?1,NULL,?2,?3 WHERE EXISTS(SELECT 1 FROM attachment_uploads WHERE file_id=?1)",&[json!(id),json!(metadata),json!(now)])?]).await.map_err(|_|ApiError::domain("ATTACHMENT_RESERVATION_CONFLICT",409))?;
-        if !reservation[0].meta()?.is_some_and(|m| m.changes == Some(1)) {
-            let usage=db.first::<Value>("SELECT COUNT(*) AS count,COALESCE(SUM(size),0) AS bytes FROM attachment_uploads WHERE owner_user_id=?1 AND status IN ('RESERVED','UPLOADING','READY') AND expires_at>?2",&[json!(auth.user_id),json!(now)]).await?;
-            let quota = usage.is_some_and(|u| {
-                u["count"].as_u64().unwrap_or_default() >= 16
-                    || u["bytes"].as_u64().unwrap_or_default() + size > 1073741824
-            });
-            return Err(ApiError::domain(
-                if quota {
-                    "ATTACHMENT_QUOTA_EXCEEDED"
-                } else {
-                    "ATTACHMENT_RESERVATION_CONFLICT"
-                },
-                409,
-            ));
+        let reservation=db.0.batch(vec![db.statement(&format!("INSERT INTO attachment_uploads(file_id,upload_id,object_key,owner_user_id,chat_id,status,size,created_at,expires_at) SELECT ?5,NULL,?6,?2,?1,'RESERVED',?7,?8,?9 WHERE {AUTHORITY}"),&values)?,db.statement("INSERT INTO attachments(file_id,message_id,encrypted_metadata,created_at) SELECT ?1,NULL,?2,?3 WHERE EXISTS(SELECT 1 FROM attachment_uploads WHERE file_id=?1)",&[json!(id),json!(metadata),json!(now)])?]).await.map_err(|e|storage_error(e,"ATTACHMENT_RESERVATION_CONFLICT"))?;
+        // D1 includes writes made by the accounting triggers in this count.
+        // A successful admission can therefore report more than one change.
+        if !reservation[0]
+            .meta()?
+            .is_some_and(|m| m.changes.unwrap_or(0) > 0)
+        {
+            return Err(ApiError::domain("ATTACHMENT_RESERVATION_CONFLICT", 409));
         }
         let bucket = env.bucket("ATTACHMENTS")?;
         let multipart = match bucket
@@ -176,6 +189,13 @@ pub async fn handle(
                 .ok_or_else(validation)?;
             let row = owned(db, auth, id, &["UPLOADING"]).await?;
             not_expired(&row)?;
+            if !part_size_allowed(
+                row["size"].as_u64().ok_or_else(validation)?,
+                number,
+                advertised,
+            ) {
+                return Err(ApiError::domain("ATTACHMENT_PART_SIZE_INVALID", 409));
+            }
             let bucket = env.bucket("ATTACHMENTS")?;
             let upload = bucket
                 .resume_multipart_upload(text(&row, "object_key")?, text(&row, "upload_id")?)?;
@@ -186,20 +206,21 @@ pub async fn handle(
                     return Err(validation());
                 }
             };
-            let uploaded = upload
-                .upload_part(number, bytes)
-                .await
-                .map_err(|_| ApiError::retryable("ATTACHMENT_PART_FAILED", 503))?;
-            let etag = uploaded.etag();
-            let mut values = authority_values(auth, text(&row, "chat_id")?);
-            values.extend([
-                json!(id),
-                json!(number),
-                json!(etag),
-                json!(advertised),
-                json!(now_iso()),
-            ]);
-            if !changed(db,&format!("INSERT INTO attachment_parts(file_id,part_number,etag,size,created_at) SELECT ?5,?6,?7,?8,?9 FROM attachment_uploads u WHERE u.file_id=?5 AND u.owner_user_id=?2 AND u.status='UPLOADING' AND u.expires_at>?9 AND {AUTHORITY} ON CONFLICT(file_id,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created_at=excluded.created_at"),&values).await?{discard(db,&bucket,&row).await?;return Err(ApiError::domain("ATTACHMENT_STATE_INVALID",409));}
+            let token = begin_write(db, auth, &row, "part").await?;
+            let outcome: ApiResult<String> = async {
+                let uploaded = upload.upload_part(number, bytes).await
+                    .map_err(|_| ApiError::retryable("ATTACHMENT_PART_FAILED", 503))?;
+                let etag = uploaded.etag();
+                let mut values = authority_values(auth, text(&row, "chat_id")?);
+                values.extend([json!(id), json!(number), json!(etag), json!(advertised), json!(now_iso())]);
+                if !changed(db,&format!("INSERT INTO attachment_parts(file_id,part_number,etag,size,created_at) SELECT ?5,?6,?7,?8,?9 FROM attachment_uploads u WHERE u.file_id=?5 AND u.owner_user_id=?2 AND u.status='UPLOADING' AND u.expires_at>?9 AND {AUTHORITY} ON CONFLICT(file_id,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created_at=excluded.created_at"),&values).await? {
+                    discard(db,&bucket,&row).await?;
+                    return Err(ApiError::domain("ATTACHMENT_STATE_INVALID",409));
+                }
+                Ok(etag)
+            }.await;
+            finish_write(db, id, &token).await?;
+            let etag = outcome?;
             Ok(Some(json(
                 &json!({"part_number":number,"etag":etag,"size":advertised}),
             )?))
@@ -233,25 +254,32 @@ pub async fn handle(
             )?;
             let bucket = env.bucket("ATTACHMENTS")?;
             let key = text(&row, "object_key")?;
-            let object = if let Some(object) = bucket.head(key).await? {
-                object
-            } else {
-                bucket
-                    .resume_multipart_upload(key, text(&row, "upload_id")?)?
-                    .complete(requested.iter().map(|p| {
-                        UploadedPart::new(
-                            p["part_number"].as_u64().unwrap_or_default() as u16,
-                            p["etag"].as_str().unwrap_or_default().into(),
-                        )
-                    }))
-                    .await
-                    .map_err(|_| ApiError::retryable("ATTACHMENT_COMPLETE_FAILED", 503))?
-            };
-            if Some(object.size()) != row["size"].as_u64() {
-                discard(db, &bucket, &row).await?;
-                return Err(ApiError::domain("ATTACHMENT_SIZE_MISMATCH", 409));
+            let token = begin_write(db, auth, &row, "complete").await?;
+            let outcome: ApiResult<()> = async {
+                let object = if let Some(object) = bucket.head(key).await? {
+                    object
+                } else {
+                    bucket
+                        .resume_multipart_upload(key, text(&row, "upload_id")?)?
+                        .complete(requested.iter().map(|p| {
+                            UploadedPart::new(
+                                p["part_number"].as_u64().unwrap_or_default() as u16,
+                                p["etag"].as_str().unwrap_or_default().into(),
+                            )
+                        }))
+                        .await
+                        .map_err(|_| ApiError::retryable("ATTACHMENT_COMPLETE_FAILED", 503))?
+                };
+                if Some(object.size()) != row["size"].as_u64() {
+                    discard(db, &bucket, &row).await?;
+                    return Err(ApiError::domain("ATTACHMENT_SIZE_MISMATCH", 409));
+                }
+                ready(db, &bucket, auth, &row).await?;
+                Ok(())
             }
-            ready(db, &bucket, auth, &row).await?;
+            .await;
+            finish_write(db, id, &token).await?;
+            outcome?;
             Ok(Some(status(db, auth, id).await?))
         }
         (Method::Get, [_, _, "content"]) => {
@@ -321,6 +349,13 @@ pub async fn handle(
         }
         _ => Ok(None),
     }
+}
+fn part_size_allowed(size: u64, number: u16, advertised: u64) -> bool {
+    if !(1..=2).contains(&number) {
+        return false;
+    }
+    let remaining = size.saturating_sub(u64::from(number - 1) * FULL);
+    remaining >= 16 && advertised == remaining.min(FULL)
 }
 fn validate_parts(size: u64, stored: &[Value], requested: &[Value]) -> ApiResult<()> {
     if stored.len() != requested.len() || stored.is_empty() || stored.len() > 2 {
@@ -398,7 +433,7 @@ pub async fn claim_attachments(
             json!(fingerprint),
             json!(now_iso()),
         ]);
-        db.0.batch(vec![db.statement(&format!("INSERT OR IGNORE INTO chat_storage_attachment_claims(file_id,chat_id,client_message_id,sender_device_id,fingerprint,created_at) SELECT file_id,chat_id,?6,?4,?7,?8 FROM attachment_uploads WHERE file_id=?5 AND owner_user_id=?2 AND chat_id=?1 AND status='READY' AND expires_at>?8 AND {AUTHORITY}"),&values)?,db.statement("UPDATE attachment_uploads SET status='COMMITTED' WHERE file_id=?1 AND status='READY' AND EXISTS(SELECT 1 FROM chat_storage_attachment_claims WHERE file_id=?1 AND chat_id=?2 AND client_message_id=?3 AND sender_device_id=?4 AND fingerprint=?5)",&[json!(id),json!(chat),json!(client),json!(auth.device_id),json!(fingerprint)])?]).await?;
+        db.0.batch(vec![db.statement(&format!("INSERT OR IGNORE INTO chat_storage_attachment_claims(file_id,chat_id,client_message_id,sender_device_id,fingerprint,created_at) SELECT file_id,chat_id,?6,?4,?7,?8 FROM attachment_uploads WHERE file_id=?5 AND owner_user_id=?2 AND chat_id=?1 AND status='READY' AND write_token IS NULL AND expires_at>?8 AND {AUTHORITY}"),&values)?,db.statement("UPDATE attachment_uploads SET status='COMMITTED' WHERE file_id=?1 AND status='READY' AND EXISTS(SELECT 1 FROM chat_storage_attachment_claims WHERE file_id=?1 AND chat_id=?2 AND client_message_id=?3 AND sender_device_id=?4 AND fingerprint=?5)",&[json!(id),json!(chat),json!(client),json!(auth.device_id),json!(fingerprint)])?]).await?;
         if db.first::<Value>("SELECT 1 AS ok FROM chat_storage_attachment_claims c JOIN attachment_uploads a ON a.file_id=c.file_id WHERE c.file_id=?1 AND c.chat_id=?2 AND c.client_message_id=?3 AND c.sender_device_id=?4 AND c.fingerprint=?5 AND a.status='COMMITTED' AND a.owner_user_id=?6",&[json!(id),json!(chat),json!(client),json!(auth.device_id),json!(fingerprint),json!(auth.user_id)]).await?.is_none(){return Err(ApiError::domain("ATTACHMENT_NOT_READY",409));}
     }
     Ok(())
@@ -427,6 +462,16 @@ pub async fn release_claims(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn parts_cannot_store_more_than_the_reserved_encrypted_bytes() {
+        assert!(part_size_allowed(32, 1, 32));
+        assert!(part_size_allowed(FULL + 32, 1, FULL));
+        assert!(part_size_allowed(FULL + 32, 2, 32));
+        assert!(!part_size_allowed(32, 1, FULL));
+        assert!(!part_size_allowed(32, 2, 32));
+        assert!(!part_size_allowed(FULL + 32, 2, FULL));
+        assert!(!part_size_allowed(FULL + 32, 1, 32));
+    }
     #[test]
     fn completion_rejects_stale_parts_and_size() {
         let p = json!({"part_number":1,"etag":"etag","size":32});

@@ -138,7 +138,7 @@ pub(super) async fn credential(
     password: &str,
     now: &str,
 ) -> ApiResult<D1PreparedStatement> {
-    let c = crate::password::prepare_credential(password).await?;
+    let c = crate::password::prepare_credential(db, user, password).await?;
     db.statement("INSERT INTO password_credentials(user_id,login_name,algorithm,iterations,salt,verifier,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?7) ON CONFLICT(user_id) DO UPDATE SET login_name=excluded.login_name,algorithm=excluded.algorithm,iterations=excluded.iterations,salt=excluded.salt,verifier=excluded.verifier,failed_attempts=0,next_allowed_at=NULL,updated_at=excluded.updated_at",&[json!(user),json!(name),json!(c.algorithm),json!(c.iterations),json!(c.salt),json!(c.verifier),json!(now)])
 }
 pub(super) async fn insert_credential(
@@ -148,7 +148,7 @@ pub(super) async fn insert_credential(
     password: &str,
     now: &str,
 ) -> ApiResult<D1PreparedStatement> {
-    let c = crate::password::prepare_credential(password).await?;
+    let c = crate::password::prepare_credential(db, user, password).await?;
     db.statement("INSERT INTO password_credentials(user_id,login_name,algorithm,iterations,salt,verifier,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?7)",&[json!(user),json!(name),json!(c.algorithm),json!(c.iterations),json!(c.salt),json!(c.verifier),json!(now)])
 }
 pub(super) fn chat_statements(

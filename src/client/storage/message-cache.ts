@@ -7,7 +7,7 @@ import { disposeDeviceIdentity, loadDeviceIdentity } from '../crypto/key-vault/i
 import type { EncryptedCacheRecord, JsonSetting, LocalDbSchema } from './schema';
 import { validateMessageSemantics } from '../chat/content';
 
-const CachePayloadSchema = z.object({
+export const CachePayloadSchema = z.object({
   version: z.literal(1),
   direction: z.enum(['INCOMING', 'OUTGOING']),
   message_id: z.string().uuid().nullable(),
@@ -38,6 +38,10 @@ export type CachedMessage = z.infer<typeof CachePayloadSchema> & {
   revision: number;
 };
 
+// The raw cache is an event journal, never an unbounded plaintext view.
+export const CACHE_PAGE_MESSAGES = 80;
+export const CACHE_PAGE_BYTES = 2 * 1024 * 1024;
+
 export type CacheMessageMetadata = {
   protocol_version?: number | undefined;
   direction: 'INCOMING' | 'OUTGOING';
@@ -61,6 +65,7 @@ export type MessageOrderable = {
 export function incomingCacheKey(messageId: string): string { return `message:${messageId}`; }
 export function outgoingCacheKey(clientMessageId: string): string { return `outgoing:${clientMessageId}`; }
 export function chatSyncCursorKey(chatId: string): string { return `sync:${chatId}`; }
+export function chatTimelineCursorKey(chatId: string): string { return `timeline-projection:${chatId}`; }
 
 /**
  * D1 revision is the canonical order for committed chat events. Server-side
@@ -124,8 +129,9 @@ export async function openMessageCacheRecord(masterKey: CryptoKey, record: Encry
 }
 
 export async function loadCachedMessages(db: IDBPDatabase<LocalDbSchema>, masterKey: CryptoKey, chatId: string): Promise<CachedMessage[]> {
-  const records = await db.getAllFromIndex('encrypted_cache', 'by-chat', chatId);
-  const opened = await Promise.all(records.map((record) => openMessageCacheRecord(masterKey, record)));
+  const records = await readCacheRevisionWindow(db, chatId, 0, Number.MAX_SAFE_INTEGER, 'prev');
+  const opened: CachedMessage[] = [];
+  for (const record of records) opened.push(await openMessageCacheRecord(masterKey, record));
   return opened.sort(compareMessageOrder);
 }
 
@@ -140,7 +146,7 @@ export async function loadCachedMessagesResilient(
   masterKey: CryptoKey,
   chatId: string,
 ): Promise<ResilientCachedMessages> {
-  return loadCachedMessageRangeResilient(db, masterKey, chatId, 0, Number.MAX_SAFE_INTEGER);
+  return loadCachedMessageRangeResilient(db, masterKey, chatId, 0, Number.MAX_SAFE_INTEGER, 'prev');
 }
 
 export async function loadCachedMessagesAfterRevisionResilient(
@@ -162,8 +168,9 @@ async function loadCachedMessageRangeResilient(
   chatId: string,
   afterRevision: number,
   throughRevision: number,
+  direction: IDBCursorDirection = 'next',
 ): Promise<ResilientCachedMessages> {
-  const records = await readCacheRevisionWindow(db, chatId, afterRevision, throughRevision);
+  const records = await readCacheRevisionWindow(db, chatId, afterRevision, throughRevision, direction);
   const messages: CachedMessage[] = [];
   let corruptRecordCount = 0;
   let earliestCorruptRevision: number | null = null;
@@ -182,16 +189,17 @@ async function loadCachedMessageRangeResilient(
 }
 
 export async function repairCommittedOutgoingCache(db: IDBPDatabase<LocalDbSchema>, deviceId: string, chatId: string): Promise<void> {
-  const records = await db.getAllFromIndex('pending_outbox', 'by-chat', chatId);
-  if (!records.some(record => record.status === 'COMMITTED')) return;
-  const cache = new Map((await db.getAllFromIndex('encrypted_cache', 'by-chat', chatId))
-    .map(record => [record.cache_key, record]));
-  for (const record of records) {
+  // Only unpromoted local cache entries can need ACK repair. Historical
+  // COMMITTED outbox rows must not be loaded on every view refresh.
+  const pending = await db.getAllFromIndex('encrypted_cache', 'by-chat-revision', IDBKeyRange.only([chatId, 0]), CACHE_PAGE_MESSAGES);
+  for (const cached of pending) {
+    if (!cached.cache_key.startsWith('outgoing:')) continue;
+    const record = await db.get('pending_outbox', cached.cache_key.slice('outgoing:'.length));
+    if (!record) continue;
     if (record.status !== 'COMMITTED' || !record.server_message_id || record.server_revision === undefined) continue;
-    const cached = cache.get(outgoingCacheKey(record.client_message_id));
     // The encrypted-cache revision is visible metadata. Avoid opening and
     // resealing every historical COMMITTED message on every chat load.
-    if (!cached || cached.chat_id !== chatId || cached.revision >= record.server_revision) continue;
+    if (cached.chat_id !== chatId || cached.revision >= record.server_revision) continue;
     await promoteOutgoingCache(db, deviceId, chatId, record.client_message_id, record.server_message_id, record.server_revision, {
       mutation: record.request.mutation ?? null,
       reply_to_message_id: record.request.reply_to_message_id ?? null,
@@ -199,12 +207,25 @@ export async function repairCommittedOutgoingCache(db: IDBPDatabase<LocalDbSchem
   }
 }
 
-async function readCacheRevisionWindow(db: IDBPDatabase<LocalDbSchema>, chatId: string, afterRevision: number, throughRevision: number): Promise<EncryptedCacheRecord[]> {
+export async function readCacheRevisionWindow(db: IDBPDatabase<LocalDbSchema>, chatId: string, afterRevision: number, throughRevision: number, direction: IDBCursorDirection = 'next', limit = CACHE_PAGE_MESSAGES): Promise<EncryptedCacheRecord[]> {
   if (!Number.isSafeInteger(afterRevision) || !Number.isSafeInteger(throughRevision) || afterRevision < 0 || throughRevision < afterRevision) {
     throw new Error('Invalid encrypted cache revision window');
   }
   if (afterRevision === throughRevision) return [];
-  return db.getAllFromIndex('encrypted_cache', 'by-chat-revision', IDBKeyRange.bound([chatId, afterRevision], [chatId, throughRevision], true, false));
+  const tx = db.transaction('encrypted_cache', 'readonly');
+  const index = tx.store.index('by-chat-revision');
+  let cursor = await index.openCursor(IDBKeyRange.bound([chatId, afterRevision], [chatId, throughRevision], true, false), direction);
+  const records: EncryptedCacheRecord[] = [];
+  let bytes = 0;
+  while (cursor && records.length < Math.min(limit, CACHE_PAGE_MESSAGES)) {
+    const record = cursor.value;
+    if (records.length && bytes + record.ciphertext.byteLength > CACHE_PAGE_BYTES) break;
+    records.push(record);
+    bytes += record.ciphertext.byteLength;
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return records;
 }
 
 export async function loadCachedMessagesAfterRevision(
@@ -218,9 +239,8 @@ export async function loadCachedMessagesAfterRevision(
     throw new Error('Invalid encrypted cache revision window');
   }
   const records = await readCacheRevisionWindow(db, chatId, afterRevision, throughRevision);
-  const opened = await Promise.all(records
-    .filter((record) => record.revision > afterRevision && record.revision <= throughRevision)
-    .map((record) => openMessageCacheRecord(masterKey, record)));
+  const opened: CachedMessage[] = [];
+  for (const record of records) opened.push(await openMessageCacheRecord(masterKey, record));
   return opened.sort(compareMessageOrder);
 }
 
@@ -303,7 +323,10 @@ export async function promoteOutgoingCache(
     // prove that every earlier chat revision has been processed contiguously.
     // Only the ordered /sync or realtime reconciliation paths may advance the
     // chat cursor.
-    await db.put('encrypted_cache', promoted);
+    const tx = db.transaction(['encrypted_cache', 'settings'], 'readwrite');
+    await tx.objectStore('encrypted_cache').put(promoted);
+    await invalidateTimelineProjectionInTransaction(tx.objectStore('settings'), chatId, promoted.revision);
+    await tx.done;
   } finally {
     plaintext?.fill(0);
     disposeDeviceIdentity(identity);
@@ -319,6 +342,18 @@ export async function putCursorInTransaction(
   const current = await settings.get(key) as { kind?: string; value?: unknown } | undefined;
   const prior = current?.kind === 'json' && Number.isSafeInteger(current.value) ? current.value as number : 0;
   if (revision > prior) await settings.put({ key, kind: 'json', value: revision });
+  await invalidateTimelineProjectionInTransaction(settings, chatId, revision);
+}
+
+async function invalidateTimelineProjectionInTransaction(
+  settings: { get(key: string): Promise<unknown>; put(value: JsonSetting): Promise<unknown> },
+  chatId: string, revision: number,
+): Promise<void> {
+  const key = chatTimelineCursorKey(chatId);
+  const projection = await settings.get(key) as { kind?: string; value?: unknown } | undefined;
+  if (revision > 0 && projection?.kind === 'json' && typeof projection.value === 'number' && projection.value >= revision) {
+    await settings.put({ key, kind: 'json', value: revision - 1 });
+  }
 }
 
 function cacheAad(chatId: string, cacheKey: string): Uint8Array {

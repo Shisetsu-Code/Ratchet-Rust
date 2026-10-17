@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {base,fixture,localSql,localRows,api} from './fixtures.mjs';
+import {base,fixture,localSql,localRows,api,edgeHeaders} from './fixtures.mjs';
 test('HTTP batch, chat detail and asynchronous list projection agree on revisions',async()=>{
  const a=await fixture(),chat=randomUUID(),now=new Date().toISOString(),cookie=a.cookie;
  await localSql(`INSERT INTO chats(chat_id,workspace_id,created_by_user_id,created_at) VALUES('${chat}','${a.workspace_id}','${a.user_id}','${now}'); INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`);
@@ -13,6 +13,6 @@ test('HTTP batch, chat detail and asynchronous list projection agree on revision
  const deadline=Date.now()+10000;let revision=0;while(Date.now()<deadline&&revision!==10){const listed=await api('/chats',{cookie});revision=listed.value.chats.find(c=>c.chat_id===chat)?.revision; if(revision!==10)await new Promise(r=>setTimeout(r,100));}assert.equal(revision,10);
  const orphan=randomUUID();assert.equal((await api(`/chats/${chat}/attachments`,{cookie,body:{file_id:orphan,encrypted_size:32,encrypted_metadata:'orphan'}})).status,201);
  await localSql(`UPDATE attachment_uploads SET expires_at='${new Date(Date.now()-1000).toISOString()}' WHERE file_id='${orphan}';`);
- const cleanup=await fetch(base+'/cdn-cgi/local/scheduled');assert.equal(cleanup.status,200,await cleanup.text());
+ const cleanup=await fetch(base+'/cdn-cgi/local/scheduled',{headers:edgeHeaders});assert.equal(cleanup.status,200,await cleanup.text());
  assert.equal((await localRows('SELECT status FROM attachment_uploads WHERE file_id=?',[orphan]))[0].status,'EXPIRED');
 });

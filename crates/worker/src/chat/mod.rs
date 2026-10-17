@@ -1,6 +1,8 @@
 pub(crate) mod authority;
+pub(crate) mod capacity;
 pub mod control;
 pub mod metadata;
+mod realtime_limits;
 pub mod routes;
 mod send;
 mod storage;
@@ -16,10 +18,22 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     cell::{Cell, RefCell},
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
 };
 use storage::{Commit, Store};
 use worker::*;
+
+#[derive(Deserialize)]
+#[serde(tag = "type", deny_unknown_fields)]
+enum IncomingFrame {
+    #[serde(rename = "ping")]
+    Ping {
+        #[serde(default)]
+        after_revision: Option<u64>,
+    },
+    #[serde(rename = "message.send")]
+    Send { request: SendRequest },
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Call {
@@ -38,12 +52,14 @@ pub struct ChatRealtime {
     registered: Cell<bool>,
     projection_scheduled: Cell<bool>,
     generation: Cell<u64>,
+    peer_refreshes: Cell<usize>,
     crypto: RefCell<Option<StorageCrypto>>,
     authority_cache: RefCell<authority::LocalAuthority>,
     send_lane: ratchet_core::lane::FifoLane,
     sends: send::SendQueue,
     timing_probe_enabled: bool,
     publication_lane: ratchet_core::lane::FifoLane,
+    last_presence: RefCell<Option<BTreeSet<String>>>,
 }
 
 // Poll the FIFO reservation before starting storage awaits. Later commits may
@@ -57,14 +73,57 @@ async fn enter_publication(
     Ok(publication)
 }
 
+// Release revalidates peers across D1 awaits. A close event can interleave those
+// awaits, so presence must stay paused until every overlapping refresh finishes.
+// Cancellation fails closed only for the generation owned by this guard.
+struct PeerRefresh<'a, F: FnOnce()> {
+    active: &'a Cell<usize>,
+    generation: &'a Cell<u64>,
+    started: u64,
+    abort: Option<F>,
+}
+
+impl<'a, F: FnOnce()> PeerRefresh<'a, F> {
+    fn begin(active: &'a Cell<usize>, generation: &'a Cell<u64>, abort: F) -> Self {
+        active.set(active.get() + 1);
+        Self {
+            active,
+            generation,
+            started: generation.get(),
+            abort: Some(abort),
+        }
+    }
+
+    fn finish(mut self) {
+        self.abort = None;
+    }
+}
+
+impl<F: FnOnce()> Drop for PeerRefresh<'_, F> {
+    fn drop(&mut self) {
+        self.active.set(self.active.get() - 1);
+        if self.generation.get() == self.started
+            && let Some(abort) = self.abort.take()
+        {
+            abort();
+        }
+    }
+}
+
 impl ChatRealtime {
+    fn peer_grants_ready(&self) -> bool {
+        self.peer_refreshes.get() == 0 && self.authority_cache.borrow().assert_open().is_ok()
+    }
+
     fn ensure(&self) -> ApiResult<()> {
         if !self.initialized.get() {
             self.store.initialize()?;
+            realtime_limits::initialize(&self.store.sql())?;
             self.authority_cache
                 .borrow_mut()
                 .initialize(&self.store.sql())?;
             self.initialized.set(true);
+            self.live_peers()?;
         }
         Ok(())
     }
@@ -180,21 +239,80 @@ impl ChatRealtime {
         }
         Ok(())
     }
-    fn presence(&self, chat_id: &str) -> ApiResult<()> {
-        let mut users = BTreeSet::new();
+    fn live_peers(&self) -> ApiResult<Vec<(WebSocket, Authority)>> {
+        let mut peers = Vec::new();
+        let mut users = BTreeMap::<String, usize>::new();
+        let mut devices = BTreeMap::<(String, String), usize>::new();
+        // Fences and in-flight refreshes invalidate grants without expiring the
+        // underlying sessions. Retain and count those sockets; presence remains
+        // paused until fresh authorization has completed. This also lets a cold
+        // instance recover a persisted fence instead of failing inside ensure().
+        let grants_ready = self.peer_grants_ready();
         for socket in self.state.get_websockets() {
-            if let Some(peer) = socket.deserialize_attachment::<Authority>()?
+            let Some(peer) = socket.deserialize_attachment::<Authority>()? else {
+                let _ = socket.close(Some(4001), Some("Session required"));
+                continue;
+            };
+            if grants_ready
                 && self
                     .authority_cache
                     .borrow_mut()
                     .cached(&self.store.sql(), &peer)?
-                    .is_some()
+                    .is_none()
             {
-                users.insert(peer.user_id);
+                let _ = socket.close(Some(4001), Some("Session expired"));
+                continue;
             }
+            let user_count = users.entry(peer.user_id.clone()).or_default();
+            let device_count = devices
+                .entry((peer.user_id.clone(), peer.device_id.clone()))
+                .or_default();
+            if peers.len() >= realtime_limits::SOCKETS_PER_ROOM
+                || *user_count >= realtime_limits::SOCKETS_PER_USER
+                || *device_count >= realtime_limits::SOCKETS_PER_DEVICE
+            {
+                let _ = socket.close(Some(1008), Some("Connection limit"));
+                continue;
+            }
+            *user_count += 1;
+            *device_count += 1;
+            peers.push((socket, peer));
         }
-        let event = json!({"type":"presence.changed","chat_id":chat_id,"online_user_ids":users.into_iter().take(256).collect::<Vec<_>>(),"observed_at":http::now_iso()});
-        for socket in self.state.get_websockets() {
+        Ok(peers)
+    }
+    fn admit_connection(&self, meta: &Authority) -> ApiResult<()> {
+        let peers = self.live_peers()?;
+        if peers.len() >= realtime_limits::SOCKETS_PER_ROOM
+            || peers
+                .iter()
+                .filter(|(_, p)| p.user_id == meta.user_id)
+                .count()
+                >= realtime_limits::SOCKETS_PER_USER
+            || peers
+                .iter()
+                .filter(|(_, p)| p.user_id == meta.user_id && p.device_id == meta.device_id)
+                .count()
+                >= realtime_limits::SOCKETS_PER_DEVICE
+        {
+            return Err(ApiError::retryable("REALTIME_CONNECTION_LIMIT", 429));
+        }
+        Ok(())
+    }
+    fn presence(&self, chat_id: &str, newcomer: Option<&WebSocket>) -> ApiResult<()> {
+        if !self.peer_grants_ready() {
+            return Ok(());
+        }
+        let peers = self.live_peers()?;
+        let users: BTreeSet<_> = peers.iter().map(|(_, peer)| peer.user_id.clone()).collect();
+        let changed = self.last_presence.borrow().as_ref() != Some(&users);
+        let event = json!({"type":"presence.changed","chat_id":chat_id,"online_user_ids":users,"observed_at":http::now_iso()});
+        if changed {
+            for (socket, _) in peers {
+                let _ = socket.send(&event);
+            }
+            *self.last_presence.borrow_mut() = Some(users);
+        } else if let Some(socket) = newcomer {
+            // Another tab for an already-online user only needs its own snapshot.
             let _ = socket.send(&event);
         }
         Ok(())
@@ -217,12 +335,29 @@ impl ChatRealtime {
         if !is_uuid(&meta.chat_id) {
             return Err(ApiError::domain("VALIDATION_ERROR", 422));
         }
+        if call.op == "capacity.reconcile" {
+            let namespace = self.env.durable_object("CHAT_REALTIME")?;
+            if self.state.id().to_string() != namespace.id_from_name(&meta.chat_id)?.to_string() {
+                return Err(ApiError::domain("CHAT_NOT_AVAILABLE", 403));
+            }
+            self.store.ensure_capacity(&self.env, &meta.chat_id).await?;
+            self.store.durable().await?;
+            return http::json(&json!({"ok":true}));
+        }
         if call.op == "fence" || call.op == "release" {
             let id = call.data["id"]
                 .as_str()
                 .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
             self.generation.set(self.generation.get() + 1);
+            let refresh = (call.op == "release").then(|| {
+                PeerRefresh::begin(&self.peer_refreshes, &self.generation, || {
+                    self.authority_cache.borrow_mut().invalidate();
+                })
+            });
             self.authority_cache.borrow_mut().invalidate();
+            // A new tab accepted during refresh still needs its first snapshot,
+            // even when revalidation leaves the set of online users unchanged.
+            *self.last_presence.borrow_mut() = None;
             self.registered.set(true);
             self.store
                 .sql()
@@ -260,6 +395,10 @@ impl ChatRealtime {
                 }
             }
             self.store.durable().await?;
+            if let Some(refresh) = refresh {
+                refresh.finish();
+                self.presence(&meta.chat_id, None)?;
+            }
             return http::json(&json!({"ok":true}));
         }
         if call.op == "owner.read" {
@@ -320,11 +459,12 @@ impl ChatRealtime {
         let lease = self.authorize(meta, call.op != "send").await?;
         match call.op.as_str() {
             "open" => {
+                self.admit_connection(meta)?;
                 let pair = WebSocketPair::new()?;
                 pair.server.serialize_attachment(meta)?;
                 self.state.accept_web_socket(&pair.server);
                 pair.server.send(&json!({"type":"realtime.ready","chat_id":meta.chat_id,"revision":self.store.revision()?}))?;
-                self.presence(&meta.chat_id)?;
+                self.presence(&meta.chat_id, Some(&pair.server))?;
                 Ok(Response::from_websocket(pair.client)?)
             }
             "send" => {
@@ -367,7 +507,6 @@ impl ChatRealtime {
                 })
             }
             "receipts" => {
-                let _ = lease;
                 let entries = call.data["receipts"]
                     .as_array()
                     .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
@@ -375,20 +514,32 @@ impl ChatRealtime {
                     .as_str()
                     .filter(|id| is_uuid(id))
                     .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
-                let mut ids = BTreeSet::new();
-                if entries.is_empty() || entries.len() > 100 {
-                    return Err(ApiError::domain("VALIDATION_ERROR", 422));
+                storage::receipt_entries(entries.clone())?;
+                let generation = self.generation.get();
+                // Known request IDs still undergo exact fingerprint validation in
+                // Store::receipts, but a replay needs no new storage credit.
+                if !self.store.receipt_request_known(&meta.user_id, id)? {
+                    self.store
+                        .ensure_capacity_for(
+                            &self.env,
+                            &meta.chat_id,
+                            entries.len() as u64 * 2048 + 1024,
+                            entries.len() as u64 * 2 + 1,
+                        )
+                        .await?;
                 }
-                for row in entries {
-                    let message = row["message_id"]
-                        .as_str()
-                        .filter(|id| is_uuid(id))
-                        .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
-                    if !ids.insert(message)
-                        || !matches!(row["state"].as_str(), Some("READ" | "DELIVERED"))
-                    {
-                        return Err(ApiError::domain("VALIDATION_ERROR", 422));
-                    }
+                self.authority_cache.borrow().assert_open()?;
+                if generation != self.generation.get() {
+                    return Err(ApiError::retryable("AUTHORITY_RETRY", 503));
+                }
+                if lease.until <= Date::now().as_millis() as f64
+                    || self
+                        .authority_cache
+                        .borrow_mut()
+                        .cached(&self.store.sql(), meta)?
+                        .is_none()
+                {
+                    return Err(ApiError::domain("SESSION_INVALID", 401));
                 }
                 let receipts =
                     self.store
@@ -433,12 +584,14 @@ impl DurableObject for ChatRealtime {
             registered: Cell::new(false),
             projection_scheduled: Cell::new(false),
             generation: Cell::new(0),
+            peer_refreshes: Cell::new(0),
             crypto: RefCell::new(None),
             authority_cache: RefCell::new(authority::LocalAuthority::new()),
             send_lane: ratchet_core::lane::FifoLane::new(),
             sends: send::SendQueue::new(),
             timing_probe_enabled,
             publication_lane: ratchet_core::lane::FifoLane::new(),
+            last_presence: RefCell::new(None),
         }
     }
     async fn fetch(&self, request: Request) -> Result<Response> {
@@ -462,16 +615,38 @@ impl DurableObject for ChatRealtime {
         let Some(meta) = socket.deserialize_attachment::<Authority>()? else {
             return socket.close(Some(4001), Some("Session required"));
         };
+        if self.ensure().is_err() {
+            return socket.close(Some(1013), Some("Please reconnect"));
+        }
+        let size = match &message {
+            WebSocketIncomingMessage::String(value) => value.len(),
+            WebSocketIncomingMessage::Binary(value) => value.len(),
+        };
+        match realtime_limits::admit(
+            &self.store.sql(),
+            &meta,
+            size,
+            Date::now().as_millis() as i64,
+        ) {
+            Ok(true) => {}
+            Ok(false) => return socket.close(Some(1008), Some("Frame budget exceeded")),
+            Err(_) => return socket.close(Some(1013), Some("Please reconnect")),
+        }
         let raw = match message {
-            WebSocketIncomingMessage::String(s) if s.len() <= 2 * 1024 * 1024 + 1024 => s,
+            WebSocketIncomingMessage::String(s) if s.len() <= realtime_limits::MAX_FRAME_BYTES => s,
             _ => return socket.close(Some(1009), Some("Invalid frame")),
         };
-        let value: Value = match serde_json::from_str(&raw) {
+        let value: IncomingFrame = match serde_json::from_str(&raw) {
             Ok(v) => v,
             Err(_) => return socket.close(Some(1003), Some("Invalid JSON")),
         };
-        match value["type"].as_str() {
-            Some("ping") => {
+        match value {
+            IncomingFrame::Ping { after_revision } => {
+                if after_revision
+                    .is_some_and(|revision| revision > ratchet_core::message::MAX_SAFE_INTEGER)
+                {
+                    return socket.close(Some(1003), Some("Invalid revision"));
+                }
                 match self.authorize(&meta, false).await {
                     Ok(_) => {}
                     Err(ApiError::Domain(error)) if error.retryable || error.status >= 500 => {
@@ -484,24 +659,13 @@ impl DurableObject for ChatRealtime {
                 }
                 socket.send(&json!({"type":"pong","chat_id":meta.chat_id,"revision":self.store.revision().unwrap_or_default()}))?;
             }
-            Some("message.send") => {
-                let id = value["request"]["client_message_id"]
-                    .as_str()
-                    .unwrap_or_default();
-                let input = serde_json::from_value::<SendRequest>(value["request"].clone())
-                    .map_err(|_| ApiError::domain("VALIDATION_ERROR", 422));
+            IncomingFrame::Send { request: input } => {
+                let id = &input.client_message_id;
                 let decoded_at = timing::snapshot(self.timing_probe_enabled);
-                let result = match input {
-                    Ok(input) => {
-                        self.send_message_timed(&meta, &input, Some((entry_started, decoded_at)))
-                            .await
-                    }
-                    Err(error) => Err(error),
-                };
+                let result = self
+                    .send_message_timed(&meta, &input, Some((entry_started, decoded_at)))
+                    .await;
                 match result{Ok(commit)=>socket.send(&json!({"type":"message.ack","chat_id":meta.chat_id,"message_id":commit.message_id,"client_message_id":commit.client_message_id,"revision":commit.revision,"accepted_at":commit.accepted_at,"duplicate":commit.duplicate}))?,Err(error)=>{let(error_type,retryable)=match error{ApiError::Domain(e)=>(e.code,e.retryable),ApiError::Runtime(_)=>("PERSIST_FAILED",true)};socket.send(&json!({"type":"message.nack","chat_id":meta.chat_id,"client_message_id":id,"error_type":error_type,"retryable":retryable}))?;}}
-            }
-            _ => {
-                socket.close(Some(1003), Some("Unknown frame"))?;
             }
         }
         Ok(())
@@ -514,7 +678,7 @@ impl DurableObject for ChatRealtime {
         _clean: bool,
     ) -> Result<()> {
         if let Some(meta) = socket.deserialize_attachment::<Authority>()? {
-            let _ = self.presence(&meta.chat_id);
+            let _ = self.presence(&meta.chat_id, None);
         }
         Ok(())
     }
@@ -529,6 +693,80 @@ mod publication_tests {
     use futures_util::FutureExt;
     use std::future::poll_fn;
     use std::task::Poll;
+
+    #[test]
+    fn peer_refresh_stays_paused_until_all_overlapping_refreshes_complete() {
+        let active = Cell::new(0);
+        let generation = Cell::new(1);
+        let invalidated = Cell::new(0);
+        let first = PeerRefresh::begin(&active, &generation, || {
+            invalidated.set(invalidated.get() + 1)
+        });
+        assert_eq!(active.get(), 1);
+        generation.set(2);
+        let second = PeerRefresh::begin(&active, &generation, || {
+            invalidated.set(invalidated.get() + 1)
+        });
+        first.finish();
+        assert_eq!(
+            active.get(),
+            1,
+            "an older refresh cannot enable presence during the newer refresh"
+        );
+        second.finish();
+        assert_eq!(active.get(), 0);
+        assert_eq!(invalidated.get(), 0);
+    }
+
+    #[test]
+    fn cancelled_peer_refresh_fails_closed_without_invalidating_a_newer_generation() {
+        let active = Cell::new(0);
+        let generation = Cell::new(1);
+        let invalidated = Cell::new(0);
+        let interrupted = PeerRefresh::begin(&active, &generation, || {
+            invalidated.set(invalidated.get() + 1)
+        });
+        drop(interrupted);
+        assert_eq!(invalidated.get(), 1);
+        assert_eq!(active.get(), 0);
+
+        let old = PeerRefresh::begin(&active, &generation, || {
+            invalidated.set(invalidated.get() + 1)
+        });
+        generation.set(2);
+        let current = PeerRefresh::begin(&active, &generation, || {
+            invalidated.set(invalidated.get() + 1)
+        });
+        current.finish();
+        assert_eq!(
+            active.get(),
+            1,
+            "presence remains paused while an older refresh is still pending"
+        );
+        drop(old);
+        assert_eq!(active.get(), 0);
+        assert_eq!(
+            invalidated.get(),
+            1,
+            "a cancelled stale guard must not invalidate the newly refreshed generation"
+        );
+    }
+
+    #[test]
+    fn inbound_frames_reject_unknown_variants_and_extension_fields() {
+        assert!(serde_json::from_str::<IncomingFrame>(r#"{"type":"ping"}"#).is_ok());
+        assert!(
+            serde_json::from_str::<IncomingFrame>(r#"{"type":"ping","after_revision":42}"#).is_ok()
+        );
+        for raw in [
+            r#"{"type":"ping","padding":"untrusted"}"#,
+            r#"{"type":"unknown"}"#,
+            r#"{"type":"message.send","request":null}"#,
+            r#"{"type":"ping","after_revision":-1}"#,
+        ] {
+            assert!(serde_json::from_str::<IncomingFrame>(raw).is_err(), "{raw}");
+        }
+    }
 
     #[test]
     fn slow_first_durability_preserves_message_and_receipt_publication_order() {

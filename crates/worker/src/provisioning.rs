@@ -62,8 +62,10 @@ pub async fn prepare(request: &mut Request, env: &Env) -> ApiResult<Response> {
     let mut bytes = [0; 32];
     getrandom::fill(&mut bytes).map_err(|_| ApiError::domain("RANDOM_SOURCE_FAILED", 503))?;
     let challenge = URL_SAFE_NO_PAD.encode(bytes);
-    db.run("INSERT INTO admin_provisioning_challenges(challenge_id,challenge,owner_key_id,owner_user_id,workspace_id,created_at,expires_at) VALUES(?1,?2,?3,?4,?5,?6,?7)",
-        &[json!(id),json!(challenge),json!(input.owner_key_id),json!(owner.owner_user_id),json!(owner.workspace_id),json!(http::now_iso()),json!(http::iso_at(Date::now().as_millis() as f64+300_000.0))]).await?;
+    let admission =
+        crate::auth_admission::challenge_statement(&db, request, None, &input.owner_key_id).await?;
+    db.0.batch(vec![admission,db.statement("INSERT INTO admin_provisioning_challenges(challenge_id,challenge,owner_key_id,owner_user_id,workspace_id,created_at,expires_at,admission_origin) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",
+        &[json!(id),json!(challenge),json!(input.owner_key_id),json!(owner.owner_user_id),json!(owner.workspace_id),json!(http::now_iso()),json!(http::iso_at(Date::now().as_millis() as f64+300_000.0)),json!(crate::auth_admission::origin_hash(request)?)])?]).await.map_err(crate::auth_admission::admission_error)?;
     http::json(
         &json!({"challenge_id":id,"challenge":challenge,"purpose":"ADMIN_PROVISIONING","key_id":input.owner_key_id,"origin":env.var("RP_ORIGIN")?.to_string()}),
     )
@@ -139,7 +141,7 @@ pub async fn complete(request: &mut Request, env: &Env) -> ApiResult<Response> {
             return Err(ApiError::domain(code, 409));
         }
     }
-    let credential = prepare_credential(&input.master_password).await?;
+    let credential = prepare_credential(&db, &row.owner_user_id, &input.master_password).await?;
     let now = http::now_iso();
     let user = http::random_id()?;
     let guard = http::random_id()?;

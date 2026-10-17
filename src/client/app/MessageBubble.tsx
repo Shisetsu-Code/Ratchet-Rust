@@ -1,7 +1,6 @@
-import { memo, useEffect, useState } from 'react';
+import { memo } from 'react';
 import type { UiMessage } from './SecureApp';
 import type { AttachmentDescriptor } from '../attachments/crypto';
-import { loadDecryptedAttachment, loadLocalAttachment } from '../attachments/message';
 import type { AttachmentPreviewSource } from './AttachmentPreviewModal';
 import { formatMessageTime } from '../ui/message-time';
 
@@ -25,20 +24,10 @@ export const MessageBubble = memo(function MessageBubble({message,replied,sender
 
 function shortId(value: string): string { return value.slice(0, 8); }
 function InlineAttachmentPreview(props: { chatId: string; descriptor: AttachmentDescriptor; localFile?: File | undefined; onOpen: () => void }) {
-  const [preview, setPreview] = useState<{ url: string; name: string; type: string } | null>(null);
-  useEffect(() => {
-    const abort = new AbortController();
-    let objectUrl: string | null = null;
-    const loading = props.localFile ? loadLocalAttachment(props.localFile) : loadDecryptedAttachment(props.chatId, props.descriptor, abort.signal);
-    void loading.then((file) => {
-      if (abort.signal.aborted) return;
-      objectUrl = URL.createObjectURL(file.blob);
-      setPreview({ url: objectUrl, name: file.name, type: file.type });
-    }).catch(() => undefined);
-    return () => { abort.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [props.chatId, props.descriptor.file_id, props.localFile]);
+  // Descriptors intentionally do not expose the remote filename/type. Opening
+  // the explicit preview decrypts them; mounting history never downloads files.
   return <button className="attachment-inline-preview" aria-label={`Ver adjunto ${shortId(props.descriptor.file_id)}`} onClick={props.onOpen}>
-    {preview?.type.startsWith('image/') ? <img src={preview.url} alt={preview.name} /> : <span className="pdf-preview-icon">PDF</span>}
-    <span>{preview?.name ?? 'Abriendo adjunto…'}</span>
+    <span className="pdf-preview-icon" aria-hidden="true">↧</span>
+    <span>{props.localFile?.name ?? 'Ver adjunto'} · {(props.descriptor.plaintext_size / (1024 * 1024)).toFixed(1)} MB</span>
   </button>;
 }

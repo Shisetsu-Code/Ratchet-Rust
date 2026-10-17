@@ -4,7 +4,7 @@ import {randomBytes,randomUUID,pbkdf2Sync,createHash} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {chromium,expect} from '@playwright/test';
-import {base,fixture,localSql} from './fixtures.mjs';
+import {base,fixture,localSql,edgeHeaders} from './fixtures.mjs';
 
 const password=process.env.RATCHET_BROWSER_PASSWORD??'Browser synthetic password 2026!';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64');
@@ -52,8 +52,8 @@ async function downloadAttachments(sender,receiver,label,files){
 test('real desktop and mobile browsers deliver messages with encrypted storage, files, wallpapers, and recover after offline reload',{timeout:900000},async t=>{
  const credentials=await seedLogin();const output=resolve('tests/browser/results');await mkdir(output,{recursive:true});
  const browser=await chromium.launch({channel:'chrome',headless:true});
- const adminContext=await browser.newContext({viewport:{width:1365,height:900},serviceWorkers:'block',acceptDownloads:true});
- const customerContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block',acceptDownloads:true});
+ const adminContext=await browser.newContext({viewport:{width:1365,height:900},serviceWorkers:'block',acceptDownloads:true,extraHTTPHeaders:edgeHeaders});
+ const customerContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block',acceptDownloads:true,extraHTTPHeaders:edgeHeaders});
  const admin=await adminContext.newPage(),customer=await customerContext.newPage();
  let rejectNextWss=false,rejectNextHttp=0;
  const retriedIds=[];

@@ -23,6 +23,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
   FORBIDDEN: 'No tenés permiso para realizar esta acción.',
   ORIGIN_MISMATCH: 'La solicitud fue rechazada por seguridad. Recargá la página e intentá nuevamente.',
   VALIDATION_ERROR: 'Revisá los datos ingresados e intentá nuevamente.',
+  CHAT_STORAGE_QUOTA_EXCEEDED: 'Este chat alcanzó su límite de almacenamiento. Contactá al administrador antes de enviar más mensajes.',
+  ATTACHMENT_QUOTA_EXCEEDED: 'Se alcanzó el límite de almacenamiento de adjuntos. Contactá al administrador o enviá el mensaje sin el archivo.',
+  WALLPAPER_QUOTA_EXCEEDED: 'Se alcanzó el límite de almacenamiento de fondos. Elegí un fondo predeterminado o contactá al administrador.',
+  STORAGE_RECONCILIATION_PENDING: 'El servidor está actualizando el almacenamiento del chat. Esperá un momento e intentá nuevamente.',
 };
 
 export function friendlyError(error: unknown): string {

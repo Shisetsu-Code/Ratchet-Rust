@@ -99,7 +99,9 @@ pub async fn prepare(request: &mut Request, env: &Env) -> ApiResult<Response> {
     let challenge = URL_SAFE_NO_PAD.encode(challenge);
     let now = now_iso();
     let expires = iso_at(Date::now().as_millis() as f64 + 5.0 * 60.0 * 1000.0);
-    db.run("INSERT INTO portable_key_challenges(challenge_id,kind,challenge,key_id,public_key,user_id,workspace_id,created_at,expires_at) VALUES (?1,'BOOTSTRAP',?2,?3,?4,?5,?6,?7,?8)",&[json!(id),json!(challenge),json!(input.key_id),json!(input.public_key),json!(user),json!(workspace),json!(now),json!(expires)]).await?;
+    let admission =
+        crate::auth_admission::challenge_statement(&db, request, None, &input.key_id).await?;
+    db.0.batch(vec![admission,db.statement("INSERT INTO portable_key_challenges(challenge_id,kind,challenge,key_id,public_key,user_id,workspace_id,created_at,expires_at,admission_origin) VALUES (?1,'BOOTSTRAP',?2,?3,?4,?5,?6,?7,?8,?9)",&[json!(id),json!(challenge),json!(input.key_id),json!(input.public_key),json!(user),json!(workspace),json!(now),json!(expires),json!(crate::auth_admission::origin_hash(request)?)])?]).await.map_err(crate::auth_admission::admission_error)?;
     json(
         &json!({"challenge_id":id,"challenge":challenge,"purpose":"BOOTSTRAP","key_id":input.key_id,"origin":env.var("RP_ORIGIN")?.to_string()}),
     )
@@ -151,7 +153,7 @@ pub async fn complete(request: &mut Request, env: &Env) -> ApiResult<Response> {
         ),
         &signature,
     )?;
-    let password = prepare_credential(&input.master_password).await?;
+    let password = prepare_credential(&db, &row.user_id, &input.master_password).await?;
     let now = now_iso();
     let guard = random_id()?;
     let result=db.0.batch(vec![

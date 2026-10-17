@@ -1,12 +1,13 @@
 use crate::{
     auth::{AuthContext, require_authorized, sha256_hex},
+    auth_admission::{self, PasswordProof},
     db::Db,
     http::{ApiError, ApiResult, iso_at, json, now_iso, random_id, read_json},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ratchet_core::{
     message::is_uuid,
-    password::{Credential, PASSWORD_ITERATIONS, derive_verifier, verify_password},
+    password::{Credential, PASSWORD_ITERATIONS, derive_verifier, verify_password_uniform},
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -17,6 +18,7 @@ struct Login {
     login_name: String,
     password: String,
     device: Device,
+    proof: Option<PasswordProof>,
 }
 #[derive(Deserialize)]
 #[serde(tag = "mode", rename_all = "lowercase")]
@@ -79,11 +81,16 @@ fn validate_password(value: &str) -> ApiResult<()> {
     Ok(())
 }
 
-pub async fn prepare_credential(password: &str) -> ApiResult<Credential> {
+pub async fn prepare_credential(db: &Db, principal: &str, password: &str) -> ApiResult<Credential> {
     validate_password(password)?;
     let mut salt = [0; 16];
     getrandom::fill(&mut salt).map_err(|_| ApiError::domain("RANDOM_SOURCE_FAILED", 503))?;
-    let verifier = derive_verifier(password, &salt, PASSWORD_ITERATIONS)?;
+    let permit = auth_admission::reserve_write(db, principal).await?;
+    let checked = permit.before_kdf().and_then(|()| {
+        derive_verifier(password, &salt, PASSWORD_ITERATIONS).map_err(ApiError::from)
+    });
+    permit.release(db).await?;
+    let verifier = checked?;
     Ok(Credential {
         algorithm: "PBKDF2-SHA256".into(),
         iterations: PASSWORD_ITERATIONS,
@@ -92,11 +99,14 @@ pub async fn prepare_credential(password: &str) -> ApiResult<Credential> {
     })
 }
 
-async fn reserve_attempt(db: &Db, user: &str, now: &str) -> ApiResult<()> {
-    let reserved=db.first::<Value>("UPDATE password_credentials SET failed_attempts=MIN(failed_attempts+1,20),next_allowed_at=strftime('%Y-%m-%dT%H:%M:%fZ',?2,printf('+%d seconds',CASE WHEN failed_attempts<4 THEN 0 ELSE MIN(1 << MIN(failed_attempts-4,10),900) END)),updated_at=?2 WHERE user_id=?1 AND (next_allowed_at IS NULL OR next_allowed_at<=?2) RETURNING user_id",&[json!(user),json!(now)]).await?;
-    if reserved.is_none() {
-        return Err(ApiError::domain("AUTHENTICATION_FAILED", 401));
-    }
+pub(crate) async fn record_failure(
+    db: &Db,
+    user: Option<&str>,
+    credential: Option<&Credential>,
+) -> ApiResult<()> {
+    let now = now_iso();
+    let cutoff = iso_at(Date::now().as_millis() as f64 - 900_000.0);
+    db.run("UPDATE password_credentials SET failed_attempts=CASE WHEN updated_at<?5 THEN 1 ELSE MIN(failed_attempts+1,20) END,next_allowed_at=NULL,updated_at=?2 WHERE user_id=?1 AND salt=?3 AND verifier=?4 AND algorithm=?6 AND iterations=?7", &[json!(user),json!(now),json!(credential.map(|c| &c.salt)),json!(credential.map(|c| &c.verifier)),json!(cutoff),json!(credential.map(|c| &c.algorithm)),json!(credential.map(|c| c.iterations))]).await?;
     Ok(())
 }
 
@@ -106,34 +116,35 @@ fn guard_conflict(error: &worker::Error) -> bool {
 }
 
 pub async fn login(request: &mut Request, env: &Env) -> ApiResult<Response> {
-    let request: Login = read_json(request, 64 * 1024).await?;
-    validate_password(&request.password)?;
-    let login_name = request.login_name.trim().to_lowercase();
-    if login_name.is_empty() || login_name.encode_utf16().count() > 64 {
-        return Err(ApiError::domain("VALIDATION_ERROR", 422));
-    }
-    let (device_id, _, _) = request.device.fields()?;
+    let input: Login = read_json(request, 64 * 1024).await?;
+    validate_password(&input.password)?;
+    let login_name = auth_admission::normalize_login(&input.login_name)?;
+    let (device_id, _, _) = input.device.fields()?;
     let db = Db(env.d1("DB")?);
     let now = now_iso();
-    let credential=db.first::<LoginCredential>("SELECT pc.user_id,pc.algorithm,pc.iterations,pc.salt,pc.verifier,u.status AS user_status FROM password_credentials pc JOIN users u ON u.user_id=pc.user_id WHERE pc.login_name=?1 LIMIT 1",&[json!(login_name)]).await?;
-    if let Some(ref row) = credential {
-        reserve_attempt(&db, &row.user_id, &now).await?;
+    let permit =
+        auth_admission::reserve_login(&db, request, &login_name, input.proof.as_ref()).await?;
+    let checked = async {
+        let credential=db.first::<LoginCredential>("SELECT pc.user_id,pc.algorithm,pc.iterations,pc.salt,pc.verifier,u.status AS user_status FROM password_credentials pc JOIN users u ON u.user_id=pc.user_id WHERE pc.login_name=?1 LIMIT 1",&[json!(login_name)]).await?;
+        permit.before_kdf()?;
+        let valid = verify_password_uniform(&input.password, credential.as_ref().map(|row| &row.credential));
+        Ok::<_,ApiError>((credential,valid))
+    }.await;
+    permit.release(&db).await?;
+    let (credential, valid) = checked?;
+    if !valid {
+        record_failure(
+            &db,
+            credential.as_ref().map(|r| r.user_id.as_str()),
+            credential.as_ref().map(|r| &r.credential),
+        )
+        .await?;
     }
-    let dummy = Credential {
-        algorithm: "PBKDF2-SHA256".into(),
-        iterations: PASSWORD_ITERATIONS,
-        salt: "AAAAAAAAAAAAAAAAAAAAAA".into(),
-        verifier: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into(),
-    };
-    let valid = verify_password(
-        &request.password,
-        credential.as_ref().map(|c| &c.credential).unwrap_or(&dummy),
-    );
     let row = credential
         .filter(|r| valid && r.user_status == "ACTIVE")
         .ok_or_else(|| ApiError::domain("AUTHENTICATION_FAILED", 401))?;
     let mut writes: Vec<D1PreparedStatement> = vec![];
-    let mode = match &request.device {
+    let mode = match &input.device {
         Device::Existing { device_id } => {
             let device=db.first::<DeviceRow>("SELECT device_id,authorized_at,revoked_at FROM devices WHERE device_id=?1 AND user_id=?2 LIMIT 1",&[json!(device_id),json!(row.user_id)]).await?
                 .filter(|d|d.revoked_at.is_none()).ok_or_else(||ApiError::domain("DEVICE_NOT_AVAILABLE",403))?;
@@ -167,7 +178,7 @@ pub async fn login(request: &mut Request, env: &Env) -> ApiResult<Response> {
     getrandom::fill(&mut secret).map_err(|_| ApiError::domain("RANDOM_SOURCE_FAILED", 503))?;
     let secret = URL_SAFE_NO_PAD.encode(secret);
     let expires = iso_at(Date::now().as_millis() as f64 + 30.0 * 24.0 * 60.0 * 60.0 * 1000.0);
-    writes.insert(0,db.statement("INSERT INTO auth_commit_guards(assertion_id,valid) SELECT ?1,CASE WHEN EXISTS(SELECT 1 FROM password_credentials p JOIN users u ON u.user_id=p.user_id WHERE p.user_id=?2 AND p.salt=?3 AND p.verifier=?4 AND u.status='ACTIVE') AND (?5='new' OR EXISTS(SELECT 1 FROM devices WHERE device_id=?6 AND user_id=?2 AND revoked_at IS NULL)) THEN 1 ELSE 0 END",&[json!(guard_id),json!(row.user_id),json!(row.credential.salt),json!(row.credential.verifier),json!(mode),json!(device_id)])?);
+    writes.insert(0,db.statement("INSERT INTO auth_commit_guards(assertion_id,valid) SELECT ?1,CASE WHEN EXISTS(SELECT 1 FROM password_credentials p JOIN users u ON u.user_id=p.user_id WHERE p.user_id=?2 AND p.salt=?3 AND p.verifier=?4 AND p.algorithm=?7 AND p.iterations=?8 AND u.status='ACTIVE') AND (?5='new' OR EXISTS(SELECT 1 FROM devices WHERE device_id=?6 AND user_id=?2 AND revoked_at IS NULL)) THEN 1 ELSE 0 END",&[json!(guard_id),json!(row.user_id),json!(row.credential.salt),json!(row.credential.verifier),json!(mode),json!(device_id),json!(row.credential.algorithm),json!(row.credential.iterations)])?);
     writes.push(db.statement("UPDATE password_credentials SET failed_attempts=0,next_allowed_at=NULL,updated_at=?2 WHERE user_id=?1",&[json!(row.user_id),json!(now)])?);
     writes.push(db.statement("INSERT INTO sessions(session_id,secret_hash,user_id,device_id,created_at,last_seen_at,expires_at,webauthn_verified_at) VALUES (?1,?2,?3,?4,?5,?5,?6,NULL)",&[json!(session_id),json!(sha256_hex(&secret)),json!(row.user_id),json!(device_id),json!(now),json!(expires)])?);
     writes.push(db.statement(
@@ -216,23 +227,28 @@ pub async fn reauthenticate(
     let input: Input = read_json(request, 64 * 1024).await?;
     validate_password(&input.password)?;
     let db = Db(env.d1("DB")?);
-    let credential = db
-        .first::<Credential>(
+    let permit = auth_admission::reserve_reauth(&db, request, auth).await?;
+    let checked = async {
+        let credential = db.first::<Credential>(
             "SELECT algorithm,iterations,salt,verifier FROM password_credentials WHERE user_id=?1",
             &[json!(auth.user_id)],
-        )
-        .await?;
-    if credential.is_some() {
-        reserve_attempt(&db, &auth.user_id, &now_iso()).await?;
+        ).await?;
+        permit.before_kdf()?;
+        let valid = verify_password_uniform(&input.password, credential.as_ref());
+        Ok::<_, ApiError>((credential, valid))
     }
-    let credential = credential.ok_or_else(|| ApiError::domain("AUTHENTICATION_FAILED", 401))?;
-    if !verify_password(&input.password, &credential) {
+    .await;
+    permit.release(&db).await?;
+    let (credential, valid) = checked?;
+    if !valid {
+        record_failure(&db, Some(&auth.user_id), credential.as_ref()).await?;
         return Err(ApiError::domain("AUTHENTICATION_FAILED", 401));
     }
+    let credential = credential.ok_or_else(|| ApiError::domain("AUTHENTICATION_FAILED", 401))?;
     let now = now_iso();
     let guard_id = random_id()?;
     let result=db.0.batch(vec![
-        db.statement("INSERT INTO auth_commit_guards(assertion_id,valid) SELECT ?1,CASE WHEN EXISTS(SELECT 1 FROM password_credentials p JOIN users u ON u.user_id=p.user_id JOIN sessions s ON s.user_id=p.user_id JOIN devices d ON d.device_id=s.device_id WHERE p.user_id=?2 AND p.salt=?3 AND p.verifier=?4 AND u.status='ACTIVE' AND s.session_id=?5 AND s.revoked_at IS NULL AND s.expires_at>?6 AND d.revoked_at IS NULL) THEN 1 ELSE 0 END",&[json!(guard_id),json!(auth.user_id),json!(credential.salt),json!(credential.verifier),json!(auth.session_id),json!(now)])?,
+        db.statement("INSERT INTO auth_commit_guards(assertion_id,valid) SELECT ?1,CASE WHEN EXISTS(SELECT 1 FROM password_credentials p JOIN users u ON u.user_id=p.user_id JOIN sessions s ON s.user_id=p.user_id JOIN devices d ON d.device_id=s.device_id AND d.user_id=s.user_id WHERE p.user_id=?2 AND p.salt=?3 AND p.verifier=?4 AND p.algorithm=?7 AND p.iterations=?8 AND u.status='ACTIVE' AND s.session_id=?5 AND s.revoked_at IS NULL AND s.expires_at>?6 AND d.revoked_at IS NULL AND d.authorized_at IS NOT NULL) THEN 1 ELSE 0 END",&[json!(guard_id),json!(auth.user_id),json!(credential.salt),json!(credential.verifier),json!(auth.session_id),json!(now),json!(credential.algorithm),json!(credential.iterations)])?,
         db.statement("UPDATE password_credentials SET failed_attempts=0,next_allowed_at=NULL WHERE user_id=?1",&[json!(auth.user_id)])?,
         db.statement("UPDATE sessions SET authenticator_verified_at=?2 WHERE session_id=?1 AND user_id=?3 AND revoked_at IS NULL",&[json!(auth.session_id),json!(now),json!(auth.user_id)])?,
         db.statement("DELETE FROM auth_commit_guards WHERE assertion_id=?1",&[json!(guard_id)])?

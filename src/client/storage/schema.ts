@@ -2,7 +2,7 @@ import type { DBSchema } from 'idb';
 import type { SendMessageRequest } from '../../shared/contracts/messages';
 
 export const LOCAL_DB_NAME = 'ratchet-secure-support' as const;
-export const LOCAL_DB_SCHEMA_VERSION = 3 as const;
+export const LOCAL_DB_SCHEMA_VERSION = 4 as const;
 
 export type DeviceIdentityRecord = { local_device_id: string; identity_public_key: string; encrypted_private_material: Uint8Array; private_material_nonce: Uint8Array; local_master_key?: CryptoKey; created_at: string };
 export type PrekeyPurpose = 'SIGNED' | 'ONE_TIME' | 'LAST_RESORT';
@@ -34,6 +34,15 @@ export type PendingOutboxRecord = {
 export type TrustedDeviceMode = 'SELF' | 'ACCOUNT_AUTHORIZED' | 'TOFU' | 'VERIFIED' | 'CERTIFIED' | 'ROTATED';
 export type TrustedPeerDeviceRecord = { device_id: string; user_id: string; identity_public_key: string; trust_mode: TrustedDeviceMode; signer_device_id?: string; certificate?: string; first_seen_at: string; verified_at: string; manual_verified_at?: string; root_device_id?: string; root_fingerprint?: string; revoked_at?: string };
 export type EncryptedCacheRecord = { cache_key: string; chat_id: string; revision: number; ciphertext: Uint8Array; nonce: Uint8Array; updated_at: string };
+export type EncryptedTimelineRecord = {
+  timeline_key: string;
+  chat_id: string;
+  revision: number;
+  applied_revision: number;
+  visible: 0 | 1;
+  ciphertext: Uint8Array;
+  nonce: Uint8Array;
+};
 export type AttachmentUploadRecord = {
   file_id: string;
   chat_id: string;
@@ -59,9 +68,10 @@ export interface LocalDbSchema extends DBSchema {
   prekeys: { key: string; value: PrekeyRecord; indexes: { 'by-device': string } };
   sessions: { key: string; value: CryptoSessionRecord; indexes: { 'by-lock-name': string } };
   skipped_message_keys: { key: string; value: SkippedMessageKeyRecord; indexes: { 'by-session': string } };
-  pending_outbox: { key: string; value: PendingOutboxRecord; indexes: { 'by-status': OutboxStatus; 'by-chat': string } };
+  pending_outbox: { key: string; value: PendingOutboxRecord; indexes: { 'by-status': OutboxStatus; 'by-chat': string; 'by-chat-status': [string, OutboxStatus]; 'by-chat-status-sequence': [string, OutboxStatus, number]; 'by-chat-device-status-sequence': [string, string, OutboxStatus, number] } };
   trusted_peer_devices: { key: string; value: TrustedPeerDeviceRecord; indexes: { 'by-user': string } };
   encrypted_cache: { key: string; value: EncryptedCacheRecord; indexes: { 'by-chat': string; 'by-chat-revision': [string, number] } };
+  message_timeline: { key: string; value: EncryptedTimelineRecord; indexes: { 'by-chat-visible-revision': [string, number, number] } };
   attachment_uploads: { key: string; value: AttachmentUploadRecord; indexes: { 'by-status': AttachmentUploadRecord['status']; 'by-chat': string } };
   settings: { key: string; value: SettingRecord };
 }

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import queue
 import threading
 from datetime import datetime, timezone
@@ -56,27 +55,19 @@ def signed_operation(origin: str, key_path: Path, password: str, operation: dict
         del private_key
 
 
-def recovery_operation(account: dict, password: str, output: Path | None) -> dict:
+def recovery_operation(account: dict, password: str, output: Path | None, *, key_password: str | None = None) -> dict:
     if account.get('role') not in {'CUSTOMER', 'ADMIN'} or not isinstance(account.get('user_id'), str):
         raise setup.SetupError('Sólo se pueden recuperar cuentas CUSTOMER o ADMIN seleccionadas.')
     if not 15 <= len(password) <= 256:
         raise setup.SetupError('La contraseña nueva debe tener entre 15 y 256 caracteres.')
     operation = {'type': 'account.recover', 'user_id': account['user_id'], 'new_password': password}
     if account['role'] == 'ADMIN':
+        key_password = setup.validate_key_password(password, key_password)
         if output is None or output.suffix.lower() != '.ratchet-key':
             raise setup.SetupError('Elegí un archivo .ratchet-key nuevo para el ADMIN.')
-        document, private_key = setup.create_key_document(password)
+        document, private_key = setup.create_key_document(key_password)
         del private_key
-        # Exclusive creation also closes the check-then-write overwrite race.
-        try:
-            descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        except FileExistsError as exc:
-            raise setup.SetupError('Ese archivo ya existe. Elegí otro para no sobrescribir una llave.') from exc
-        with os.fdopen(descriptor, 'w', encoding='utf-8') as handle:
-            json.dump(document, handle, ensure_ascii=False, indent=2)
-            handle.write('\n')
-            handle.flush()
-            os.fsync(handle.fileno())
+        setup.write_key_file(output, document)
         operation.update(new_key_id=document['key_id'], new_public_key=document['public_key'])
     return operation
 
@@ -358,27 +349,40 @@ class OwnerConsoleApp:
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text=f"{account.get('login_name') or account.get('display_name') or 'Cuenta'} · {account['role']}\nID: {account['user_id']}\nSe revocarán las credenciales anteriores y las sesiones/dispositivos.\nLa identidad y el historial se conservarán.", wraplength=580).grid(row=0, column=0, columnspan=2, sticky='w', pady=10)
         password, confirmation, output = tk.StringVar(), tk.StringVar(), tk.StringVar()
+        key_password, key_confirmation = tk.StringVar(), tk.StringVar()
         for row, (label, variable) in enumerate([('Nueva contraseña', password), ('Confirmar contraseña', confirmation)], start=1):
             ttk.Label(frame, text=label).grid(row=row, column=0, sticky='w', pady=4)
             ttk.Entry(frame, textvariable=variable, show='•', width=45).grid(row=row, column=1)
         if account['role'] == 'ADMIN':
-            ttk.Label(frame, text='Nueva llave ADMIN cifrada').grid(row=3, column=0, sticky='w')
-            ttk.Entry(frame, textvariable=output, width=45).grid(row=3, column=1)
+            for row, (label, variable) in enumerate([('Contraseña local de llave ADMIN', key_password), ('Confirmar contraseña de llave', key_confirmation)], start=3):
+                ttk.Label(frame, text=label).grid(row=row, column=0, sticky='w', pady=4)
+                ttk.Entry(frame, textvariable=variable, show='•', width=45).grid(row=row, column=1)
+            ttk.Label(frame, text='Nueva llave ADMIN cifrada').grid(row=5, column=0, sticky='w')
+            ttk.Entry(frame, textvariable=output, width=45).grid(row=5, column=1)
 
             def choose():
                 path = filedialog.asksaveasfilename(parent=dialog, defaultextension='.ratchet-key', filetypes=[('Llave Ratchet', '*.ratchet-key')], initialfile=setup.key_filename(account.get('login_name', ''), 'admin-recuperado'))
                 if path:
                     output.set(path)
-            ttk.Button(frame, text='Elegir archivo nuevo…', command=choose).grid(row=4, column=1, sticky='e')
-        ttk.Label(frame, text='Contraseña de llave owner').grid(row=5, column=0, sticky='w', pady=8)
-        ttk.Entry(frame, textvariable=self.owner_password, show='•', width=45).grid(row=5, column=1)
+            ttk.Button(frame, text='Elegir archivo nuevo…', command=choose).grid(row=6, column=1, sticky='e')
+        ttk.Label(frame, text='Contraseña de llave owner').grid(row=7, column=0, sticky='w', pady=8)
+        ttk.Entry(frame, textvariable=self.owner_password, show='•', width=45).grid(row=7, column=1)
 
         def confirm():
             secret = password.get()
+            local_secret = key_password.get()
             key_output = Path(output.get()).expanduser() if output.get() else None
             if secret != confirmation.get() or not 15 <= len(secret) <= 256:
                 messagebox.showerror('Revisá los datos', 'Las contraseñas deben coincidir y tener entre 15 y 256 caracteres.', parent=dialog)
                 return
+            if account['role'] == 'ADMIN':
+                try:
+                    setup.validate_key_password(secret, local_secret)
+                    if local_secret != key_confirmation.get():
+                        raise setup.SetupError('Las contraseñas locales de llave no coinciden.')
+                except setup.SetupError as exc:
+                    messagebox.showerror('Revisá la contraseña local', str(exc), parent=dialog)
+                    return
             if account['role'] == 'ADMIN' and (key_output is None or key_output.suffix.lower() != '.ratchet-key' or key_output.exists()):
                 messagebox.showerror('Revisá el archivo', 'Elegí un archivo .ratchet-key que todavía no exista.', parent=dialog)
                 return
@@ -389,13 +393,15 @@ class OwnerConsoleApp:
                 return
             password.set('')
             confirmation.set('')
+            key_password.set('')
+            key_confirmation.set('')
             dialog.destroy()
 
             def recovered(result):
                 if result.get('recovered') is not True or result.get('user_id') != account['user_id']:
                     raise ValueError('recovery')
                 self.status.set('Cuenta recuperada; credenciales anteriores y sesiones revocadas.' + (f' Nueva llave: {key_output}' if key_output else ''))
-                messagebox.showinfo('Cuenta recuperada', 'Entregá las nuevas credenciales por canales seguros. La contraseña nueva también protege la nueva llave ADMIN, cuando corresponde.', parent=self.root)
-            self._execute(lambda: recovery_operation(account, secret, key_output), recovered)
+                messagebox.showinfo('Cuenta recuperada', 'Entregá las nuevas credenciales por canales seguros. La contraseña de cuenta y la contraseña local de la nueva llave ADMIN son independientes.', parent=self.root)
+            self._execute(lambda: recovery_operation(account, secret, key_output, key_password=local_secret), recovered)
 
-        ttk.Button(frame, text='Recuperar esta cuenta y revocar sesiones', command=confirm).grid(row=6, column=0, columnspan=2, sticky='ew', pady=14)
+        ttk.Button(frame, text='Recuperar esta cuenta y revocar sesiones', command=confirm).grid(row=8, column=0, columnspan=2, sticky='ew', pady=14)

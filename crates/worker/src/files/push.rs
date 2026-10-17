@@ -1,5 +1,7 @@
 use super::*;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use futures_util::{StreamExt, stream};
+use std::{future::Future, time::Duration};
 use worker::{
     js_sys::{self, Array, Function, Reflect, Uint8Array},
     wasm_bindgen::{JsCast, JsValue},
@@ -76,6 +78,81 @@ fn credentials(env: &Env) -> Option<Vapid> {
         subject,
     })
 }
+
+const DELIVERY_LEASE_MS: i64 = 30_000;
+const DELIVERY_WORK_MS: i64 = 10_000;
+
+#[derive(Clone, Copy)]
+struct DeliveryLease {
+    claimed_at: i64,
+    until: i64,
+}
+impl DeliveryLease {
+    fn new(now: i64) -> Self {
+        Self {
+            claimed_at: now,
+            until: now + DELIVERY_LEASE_MS,
+        }
+    }
+    fn work_deadline(self) -> i64 {
+        self.claimed_at + DELIVERY_WORK_MS
+    }
+}
+
+async fn dispatch_batch<'a, R, F: Future<Output = ApiResult<()>>>(
+    rows: &'a [R],
+    clock: impl Fn() -> i64,
+    work: impl Fn(&'a R, DeliveryLease) -> F,
+) -> Vec<ApiResult<()>> {
+    // Sample when a concurrency slot actually starts this row, not when the
+    // 32-row batch was selected. Later waves can start tens of seconds later.
+    stream::iter(
+        rows.iter()
+            .map(|row| async { work(row, DeliveryLease::new(clock())).await }),
+    )
+    .buffer_unordered(4)
+    .collect()
+    .await
+}
+
+struct AbortOnDrop<F: FnOnce()>(Option<F>);
+impl<F: FnOnce()> Drop for AbortOnDrop<F> {
+    fn drop(&mut self) {
+        if let Some(abort) = self.0.take() {
+            abort();
+        }
+    }
+}
+
+async fn run_until<T>(
+    deadline: i64,
+    clock: impl Fn() -> i64,
+    timer: impl Future<Output = ()>,
+    operation: impl Future<Output = ApiResult<T>>,
+    abort: impl FnOnce(),
+) -> ApiResult<T> {
+    let _abort = AbortOnDrop(Some(abort));
+    let mut timer = std::pin::pin!(timer);
+    let mut operation = std::pin::pin!(operation);
+    std::future::poll_fn(|cx| {
+        // Check before every continuation, even if a delayed timer callback has
+        // not run yet. A suspended claim must never resume crypto or dispatch.
+        if clock() >= deadline || timer.as_mut().poll(cx).is_ready() {
+            return std::task::Poll::Ready(Err(ApiError::retryable("PUSH_DEADLINE_EXCEEDED", 503)));
+        }
+        match operation.as_mut().poll(cx) {
+            std::task::Poll::Ready(_) if clock() >= deadline => {
+                std::task::Poll::Ready(Err(ApiError::retryable("PUSH_DEADLINE_EXCEEDED", 503)))
+            }
+            result => result,
+        }
+    })
+    .await
+}
+
+fn clock_ms() -> i64 {
+    worker::Date::now().as_millis() as i64
+}
 pub async fn handle(
     request: &mut Request,
     env: &Env,
@@ -96,19 +173,16 @@ pub async fn handle(
             let url = endpoint(text(&input, "endpoint")?)?;
             input["endpoint"] = json!(url.as_str());
             let hash = auth::sha256_hex(url.as_str());
-            let existing=db.first::<Value>("SELECT subscription_id,user_id,device_id FROM push_subscriptions WHERE endpoint_hash=?1",&[json!(hash)]).await?;
-            let id = if let Some(row) = existing {
-                if row["user_id"] != auth.user_id || row["device_id"] != auth.device_id {
-                    return Err(ApiError::domain("PUSH_ENDPOINT_CONFLICT", 409));
-                }
-                let id = text(&row, "subscription_id")?.to_string();
-                db.run("UPDATE push_subscriptions SET subscription_json=?2,revoked_at=NULL WHERE subscription_id=?1",&[json!(id),json!(input.to_string())]).await?;
-                id
-            } else {
-                let id = crate::http::random_id()?;
-                db.run("INSERT INTO push_subscriptions(subscription_id,user_id,device_id,endpoint_hash,subscription_json,created_at) VALUES(?1,?2,?3,?4,?5,?6)",&[json!(id),json!(auth.user_id),json!(auth.device_id),json!(hash),json!(input.to_string()),json!(now_iso())]).await?;
-                id
-            };
+            let input = json!({"endpoint":url.as_str(),"expirationTime":input.get("expirationTime").cloned().unwrap_or(Value::Null),"keys":{"p256dh":input["keys"]["p256dh"],"auth":input["keys"]["auth"]}});
+            let id = crate::http::random_id()?;
+            // Replacing a browser's endpoint updates its one durable slot. Unique
+            // endpoint ownership and user/global cardinality are enforced by D1.
+            db.run("INSERT INTO push_subscriptions(subscription_id,user_id,device_id,endpoint_hash,subscription_json,created_at) VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(device_id) DO UPDATE SET endpoint_hash=excluded.endpoint_hash,subscription_json=excluded.subscription_json,revoked_at=NULL,created_at=excluded.created_at WHERE push_subscriptions.user_id=excluded.user_id", &[json!(id),json!(auth.user_id),json!(auth.device_id),json!(hash),json!(input.to_string()),json!(now_iso())]).await.map_err(|e|storage_error_api(e,"PUSH_ENDPOINT_CONFLICT"))?;
+            let row=db.first::<Value>("SELECT subscription_id,endpoint_hash FROM push_subscriptions WHERE device_id=?1 AND user_id=?2", &[json!(auth.device_id),json!(auth.user_id)]).await?.ok_or_else(||ApiError::domain("PUSH_ENDPOINT_CONFLICT",409))?;
+            if row["endpoint_hash"] != hash {
+                return Err(ApiError::domain("PUSH_ENDPOINT_CONFLICT", 409));
+            }
+            let id = text(&row, "subscription_id")?;
             Ok(Some(json(&json!({"subscription_id":id}))?.with_status(201)))
         }
         (Method::Delete, [_, "subscriptions", id]) => {
@@ -293,7 +367,31 @@ async fn jwt(url: &worker::Url, vapid: &Vapid) -> ApiResult<String> {
     }
     Ok(format!("{input}.{}", URL_SAFE_NO_PAD.encode(signature)))
 }
-async fn send(subscription: &Value, vapid: &Vapid) -> ApiResult<u16> {
+async fn send(subscription: &Value, vapid: &Vapid, lease: DeliveryLease) -> ApiResult<u16> {
+    // Preparation and transport share the existing 10-second work budget. It
+    // starts at claim time and ends before the unchanged 30-second lease.
+    let deadline = lease.work_deadline();
+    let remaining = deadline - clock_ms();
+    if remaining <= 0 {
+        return Err(ApiError::retryable("PUSH_DEADLINE_EXCEEDED", 503));
+    }
+    let controller = worker::AbortController::default();
+    let signal = controller.signal();
+    run_until(
+        deadline,
+        clock_ms,
+        worker::Delay::from(Duration::from_millis(remaining as u64)),
+        prepare_and_send(subscription, vapid, &signal),
+        || controller.abort(),
+    )
+    .await
+}
+
+async fn prepare_and_send(
+    subscription: &Value,
+    vapid: &Vapid,
+    signal: &worker::AbortSignal,
+) -> ApiResult<u16> {
     let url = endpoint(text(subscription, "endpoint")?)?;
     let ciphertext = encrypt(subscription, br#"{"type":"ratchet.changed"}"#).await?;
     let token = jwt(&url, vapid).await?;
@@ -316,52 +414,209 @@ async fn send(subscription: &Value, vapid: &Vapid) -> ApiResult<u16> {
     }
     let init = init.with_headers(headers);
     let request = Request::new_with_init(url.as_str(), init)?;
-    let constructor = property(&js_sys::global(), "AbortSignal")?;
-    let timeout = property(&constructor, "timeout")?
-        .dyn_into::<Function>()
-        .map_err(js_error)?;
-    let signal = timeout
-        .call1(&constructor, &10000.into())
-        .map_err(js_error)?
-        .dyn_into::<worker::web_sys::AbortSignal>()
-        .map_err(js_error)?;
-    let signal = worker::AbortSignal::from(signal);
     let response = worker::Fetch::Request(request)
-        .send_with_signal(&signal)
+        .send_with_signal(signal)
         .await?;
     Ok(response.status_code())
 }
-/// Generic wakeup hints contain no chat identity or message contents.
+/// Generic wakeup hints coalesce into one durable queue row per subscription.
 pub async fn notify_push(env: &Env, chat: &str, sender_device: &str) -> ApiResult<()> {
+    if credentials(env).is_none() {
+        return Ok(());
+    }
+    let db = Db(env.d1("DB")?);
+    db.run("INSERT INTO push_wakeups(subscription_id,requested_at) SELECT ps.subscription_id,?3 FROM push_subscriptions ps JOIN devices d ON d.device_id=ps.device_id AND d.user_id=ps.user_id JOIN active_chat_members m ON m.user_id=ps.user_id AND m.chat_id=?1 WHERE ps.revoked_at IS NULL AND d.authorized_at IS NOT NULL AND d.revoked_at IS NULL AND ps.device_id<>?2 ON CONFLICT(subscription_id) DO UPDATE SET generation=generation+1 WHERE push_wakeups.lease_token IS NOT NULL", &[json!(chat),json!(sender_device),json!(worker::Date::now().as_millis())]).await?;
+    maintenance(env).await
+}
+
+/// Fair bounded batches prevent a failing provider or a prolific user from
+/// monopolizing every dispatch. Retries survive request/Worker termination.
+pub(super) async fn maintenance(env: &Env) -> ApiResult<()> {
     let Some(vapid) = credentials(env) else {
         return Ok(());
     };
     let db = Db(env.d1("DB")?);
-    let rows=db.all("SELECT ps.subscription_id,ps.subscription_json FROM push_subscriptions ps JOIN devices d ON d.device_id=ps.device_id AND d.user_id=ps.user_id JOIN active_chat_members m ON m.user_id=ps.user_id AND m.chat_id=?1 WHERE ps.revoked_at IS NULL AND d.authorized_at IS NOT NULL AND d.revoked_at IS NULL AND ps.device_id<>?2 ORDER BY ps.subscription_id LIMIT 256",&[json!(chat),json!(sender_device)]).await?;
-    let results=futures_util::future::join_all(rows.iter().map(|row|async {
-        let parsed = serde_json::from_str::<Value>(row["subscription_json"].as_str().unwrap_or(""));
-        let revoke = match parsed {
-            Ok(value) if subscription(&value).is_ok() => {
-                matches!(send(&value, &vapid).await, Ok(404 | 410))
-            }
-            _ => true,
-        };
-        if revoke {
-            db.run("UPDATE push_subscriptions SET revoked_at=COALESCE(revoked_at,?2) WHERE subscription_id=?1",&[row["subscription_id"].clone(),json!(now_iso())]).await?;
+    let now = worker::Date::now().as_millis() as i64;
+    db.run("DELETE FROM push_wakeups WHERE subscription_id IN (SELECT q.subscription_id FROM push_wakeups q JOIN push_subscriptions p ON p.subscription_id=q.subscription_id JOIN devices d ON d.device_id=p.device_id WHERE p.revoked_at IS NOT NULL OR d.revoked_at IS NOT NULL OR d.authorized_at IS NULL LIMIT 100)", &[]).await?;
+    let rows=db.all("SELECT * FROM (SELECT q.subscription_id,q.generation,q.attempts,q.requested_at,p.subscription_json,p.endpoint_hash,ROW_NUMBER() OVER(PARTITION BY p.user_id ORDER BY q.next_attempt_at,q.requested_at,q.subscription_id) AS user_rank FROM push_wakeups q JOIN push_subscriptions p ON p.subscription_id=q.subscription_id JOIN devices d ON d.device_id=p.device_id AND d.user_id=p.user_id JOIN users u ON u.user_id=p.user_id WHERE q.next_attempt_at<=?1 AND q.lease_until<=?1 AND p.revoked_at IS NULL AND d.revoked_at IS NULL AND d.authorized_at IS NOT NULL AND u.status='ACTIVE') ORDER BY user_rank,requested_at,subscription_id LIMIT 32", &[json!(now)]).await?;
+    let results=dispatch_batch(&rows,clock_ms,|row,lease| {
+      let db=&db;
+      let vapid=&vapid;
+      async move {
+        let token=crate::http::random_id()?;
+        if !changed(db,"UPDATE push_wakeups SET lease_token=?2,lease_until=?3 WHERE subscription_id=?1 AND next_attempt_at<=?4 AND lease_until<=?4 AND (SELECT COUNT(*) FROM push_wakeups WHERE lease_until>?4)<8", &[row["subscription_id"].clone(),json!(token),json!(lease.until),json!(lease.claimed_at)]).await? {return Ok(());}
+        let parsed=serde_json::from_str::<Value>(row["subscription_json"].as_str().unwrap_or(""));
+        let outcome=match parsed {Ok(value) if subscription(&value).is_ok()=>Some(send(&value,vapid,lease).await),_=>None};
+        let permanent=matches!(outcome,None|Some(Ok(404|410)));
+        let success=matches!(outcome,Some(Ok(200..=299)));
+        if permanent {
+            db.run("UPDATE push_subscriptions SET revoked_at=COALESCE(revoked_at,?2) WHERE subscription_id=?1 AND endpoint_hash=?3", &[row["subscription_id"].clone(),json!(now_iso()),row["endpoint_hash"].clone()]).await?;
+        }
+        let attempts=row["attempts"].as_u64().unwrap_or(0)+1;
+        if success||permanent||attempts>=8 {
+            db.0.batch(vec![db.statement("DELETE FROM push_wakeups WHERE subscription_id=?1 AND lease_token=?2 AND generation=?3", &[row["subscription_id"].clone(),json!(token),row["generation"].clone()])?,db.statement("UPDATE push_wakeups SET lease_token=NULL,lease_until=0,attempts=0,next_attempt_at=0,requested_at=?3 WHERE subscription_id=?1 AND lease_token=?2", &[row["subscription_id"].clone(),json!(token),json!(worker::Date::now().as_millis())])?]).await?;
+        } else {
+            let next=worker::Date::now().as_millis()+retry_delay(attempts);
+            db.run("UPDATE push_wakeups SET lease_token=NULL,lease_until=0,attempts=?3,next_attempt_at=?4 WHERE subscription_id=?1 AND lease_token=?2", &[row["subscription_id"].clone(),json!(token),json!(attempts),json!(next)]).await?;
         }
         Ok::<(),ApiError>(())
-    })).await;
+      }
+    }).await;
     for result in results {
         if result.is_err() {
-            worker::console_warn!("Push subscription cleanup failed");
+            worker::console_warn!("Push dispatch deferred");
         }
     }
     Ok(())
+}
+fn retry_delay(attempts: u64) -> u64 {
+    60_000u64
+        .saturating_mul(1 << attempts.saturating_sub(1).min(6))
+        .min(3_600_000)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_util::FutureExt;
+    use std::{
+        cell::{Cell, RefCell},
+        future::poll_fn,
+        task::Poll,
+    };
+
+    #[test]
+    fn slow_push_waves_receive_fresh_leases_at_each_effective_claim() {
+        let now = Cell::new(0_i64);
+        let claims = RefCell::new(Vec::new());
+        let rows: Vec<_> = (0..32).collect();
+        let mut dispatch = Box::pin(dispatch_batch(
+            &rows,
+            || now.get(),
+            |_, lease| {
+                let claimed = now.get();
+                claims.borrow_mut().push((claimed, lease.until));
+                let now = &now;
+                poll_fn(move |cx| {
+                    if now.get() >= claimed + 9_000 {
+                        Poll::Ready(Ok(()))
+                    } else {
+                        cx.waker().wake_by_ref();
+                        Poll::Pending
+                    }
+                })
+            },
+        ));
+        for tick in [0, 9_000, 18_000, 27_000] {
+            now.set(tick);
+            // Drive the cooperative executor's queued wakeups at the same fake
+            // instant before advancing to the next provider completion.
+            for _ in 0..16 {
+                assert!(dispatch.as_mut().now_or_never().is_none());
+            }
+            for &(claimed, until) in claims.borrow().iter() {
+                assert!(
+                    claimed + 9_000 < until,
+                    "provider work beginning at {claimed} must finish before lease {until}"
+                );
+                assert_eq!(until - claimed, DELIVERY_LEASE_MS);
+            }
+        }
+        assert_eq!(claims.borrow().len(), 16);
+    }
+
+    #[test]
+    fn resumed_expired_push_claim_never_polls_crypto_or_transport() {
+        let lease = DeliveryLease::new(0);
+        let polled = Cell::new(0);
+        let aborted = Cell::new(0);
+        let result = run_until(
+            lease.work_deadline(),
+            || 31_000,
+            async {},
+            async {
+                polled.set(polled.get() + 1);
+                Ok::<_, ApiError>(200_u16)
+            },
+            || aborted.set(aborted.get() + 1),
+        )
+        .now_or_never();
+        assert!(matches!(result, Some(Err(_))));
+        assert_eq!(polled.get(), 0);
+        assert_eq!(aborted.get(), 1);
+    }
+
+    #[test]
+    fn cryptographic_preparation_and_fetch_share_one_absolute_push_deadline() {
+        let now = Cell::new(0_i64);
+        let crypto_done = Cell::new(false);
+        let fetch_polls = Cell::new(0);
+        let aborted = Cell::new(0);
+        let lease = DeliveryLease::new(0);
+        let operation = async {
+            poll_fn(|_| {
+                if now.get() >= 8_000 {
+                    Poll::Ready(())
+                } else {
+                    Poll::Pending
+                }
+            })
+            .await;
+            crypto_done.set(true);
+            poll_fn(|_| {
+                fetch_polls.set(fetch_polls.get() + 1);
+                if now.get() >= 17_000 {
+                    Poll::Ready(Ok::<_, ApiError>(200_u16))
+                } else {
+                    Poll::Pending
+                }
+            })
+            .await
+        };
+        let timer = poll_fn(|_| {
+            if now.get() >= lease.work_deadline() {
+                Poll::Ready(())
+            } else {
+                Poll::Pending
+            }
+        });
+        let mut attempt = Box::pin(run_until(
+            lease.work_deadline(),
+            || now.get(),
+            timer,
+            operation,
+            || aborted.set(aborted.get() + 1),
+        ));
+        assert!(attempt.as_mut().now_or_never().is_none());
+        now.set(8_000);
+        assert!(attempt.as_mut().now_or_never().is_none());
+        assert!(crypto_done.get());
+        assert_eq!(fetch_polls.get(), 1);
+        now.set(10_000);
+        assert!(matches!(attempt.as_mut().now_or_never(), Some(Err(_))));
+        assert_eq!(
+            fetch_polls.get(),
+            1,
+            "a late callback cannot resume provider work after the shared deadline"
+        );
+        assert_eq!(aborted.get(), 1);
+        assert!(now.get() < lease.until);
+    }
+
+    #[test]
+    fn dropping_pending_push_attempt_aborts_before_its_lease_is_released() {
+        let aborted = Cell::new(0);
+        let mut attempt = Box::pin(run_until(
+            10_000,
+            || 0,
+            std::future::pending(),
+            std::future::pending::<ApiResult<u16>>(),
+            || aborted.set(aborted.get() + 1),
+        ));
+        assert!(attempt.as_mut().now_or_never().is_none());
+        drop(attempt);
+        assert_eq!(aborted.get(), 1);
+    }
     #[test]
     fn endpoint_allowlist_blocks_local_and_credentials() {
         assert!(endpoint("https://fcm.googleapis.com/fcm/send/test").is_ok());

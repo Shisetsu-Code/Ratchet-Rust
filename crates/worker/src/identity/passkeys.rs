@@ -1,5 +1,5 @@
 use super::*;
-use crate::{auth::sha256_hex, http::iso_at};
+use crate::{auth::sha256_hex, auth_admission, http::iso_at};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use worker::{
@@ -323,7 +323,14 @@ pub async fn handle(request: &mut Request, env: &Env) -> ApiResult<Option<Respon
             "AUTHENTICATION"
         };
         let expires = iso_at(Date::now().as_millis() as f64 + 300000.0);
-        db.run("INSERT INTO webauthn_challenges(challenge_id,kind,challenge,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4,?5,?6)",&[json!(challenge_id),json!(kind),json!(challenge),auth.as_ref().map(|a|json!(a.user_id)).unwrap_or(Value::Null),json!(now),json!(expires)]).await?;
+        let admission = auth_admission::challenge_statement(
+            &db,
+            request,
+            auth.as_ref(),
+            "passkey-discoverable",
+        )
+        .await?;
+        db.0.batch(vec![admission,db.statement("INSERT INTO webauthn_challenges(challenge_id,kind,challenge,user_id,created_at,expires_at,admission_origin) VALUES (?1,?2,?3,?4,?5,?6,?7)",&[json!(challenge_id),json!(kind),json!(challenge),auth.as_ref().map(|a|json!(a.user_id)).unwrap_or(Value::Null),json!(now),json!(expires),json!(auth_admission::origin_hash(request)?)])?]).await.map_err(auth_admission::admission_error)?;
         let mut options = json!({"challenge":challenge,"timeout":60000,"rpId":env.var("RP_ID")?.to_string(),"userVerification":"required"});
         if let Some(a) = &auth {
             let keys = db

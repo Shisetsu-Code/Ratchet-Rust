@@ -5,7 +5,7 @@ import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import WebSocket from 'ws';
-import {base,fixture,localSql,api} from './fixtures.mjs';
+import {base,fixture,localSql,api,edgeHeaders} from './fixtures.mjs';
 const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
 test('signed owner console binds the operation, recovers accounts, closes WSS and preserves readable history',{timeout:60000},async()=>{
   const owner=await fixture(),victim=await fixture(),foreign=await fixture(),key=randomUUID(),keys=generateKeyPairSync('ed25519'),now=new Date().toISOString(),chat=randomUUID();
@@ -27,12 +27,12 @@ INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`);
   const cipher=createCipheriv('aes-256-gcm',pbkdf2Sync(keyPassword,keySalt,600000,32,'sha256'),iv);cipher.setAAD(Buffer.from(JSON.stringify(metadata)));
   const encrypted=Buffer.concat([cipher.update(JSON.stringify({private_seed:jwk.d,public_key:jwk.x})),cipher.final(),cipher.getAuthTag()]);
   const keyPath=join(process.env.RATCHET_TEST_STATE,'synthetic-owner.ratchet-key');await writeFile(keyPath,JSON.stringify({...metadata,cipher:{...metadata.cipher,ciphertext:encrypted.toString('base64url')}}));
-  const native=spawnSync(process.env.RATCHET_PYTHON??'python',['tests/contracts/native-console.py'],{encoding:'utf8',windowsHide:true,env:{...process.env,RATCHET_TEST_OWNER_FILE:keyPath,RATCHET_TEST_OWNER_PASSWORD:keyPassword}});assert.equal(native.status,0,native.stderr);assert.equal(JSON.parse(native.stdout).native_console_verified,true);
+  const native=spawnSync(process.env.RATCHET_PYTHON??'python',['tests/contracts/native-console.py'],{encoding:'utf8',windowsHide:true,env:{...process.env,RATCHET_TEST_OWNER_FILE:keyPath,RATCHET_TEST_OWNER_PASSWORD:keyPassword,RATCHET_TEST_EDGE_ADDRESS:edgeHeaders['CF-Connecting-IP']}});assert.equal(native.status,0,native.stderr);const nativeResult=JSON.parse(native.stdout);assert.equal(nativeResult.native_console_verified,true);assert.equal(nativeResult.edge_address,edgeHeaders['CF-Connecting-IP']);
   assert.equal((await api('/owner-console/complete',{body:listed.body})).status,409);
   const p=await prepare({type:'accounts.list'});const tampered=await api('/owner-console/complete',{body:{challenge_id:p.value.challenge_id,signature:proof(p.value),operation:{type:'conversations.list'}}});assert.equal(tampered.status,403);
   const client=randomUUID();const content={protocol:'secure-message-content',v:2,chat_id:chat,client_message_id:client,sender_user_id:victim.user_id,sender_device_id:victim.device_id,message_type:'MESSAGE',text:'History survives signed recovery',attachments:[],mutation:null,reply_to_message_id:null};
   const sent=await api(`/chats/${chat}/messages`,{cookie:victim.cookie,body:{client_message_id:client,sender_sequence:1,envelopes:[{recipient_user_id:owner.user_id,recipient_device_id:owner.device_id,protocol:'secure-messaging',protocol_version:2,header:'server-sqlite-v1',ciphertext:Buffer.from(JSON.stringify(content)).toString('base64url')}],attachment_ids:[]}});assert.equal(sent.status,201,JSON.stringify(sent.value));
-  const socket=new WebSocket(base.replace('http','ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:victim.cookie,Origin:base}});
+  const socket=new WebSocket(base.replace('http','ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:victim.cookie,Origin:base,...edgeHeaders}});
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('WSS not ready')),10000);socket.on('message',raw=>{if(JSON.parse(raw).type==='realtime.ready'){clearTimeout(timer);resolve();}});socket.on('error',reject);});
   try{
     const closed=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Recovery left WSS active')),10000);socket.once('close',code=>{clearTimeout(timer);resolve(code);});});

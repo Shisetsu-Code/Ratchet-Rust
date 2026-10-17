@@ -162,12 +162,21 @@ pub async fn handle(request: &mut Request, env: &Env) -> ApiResult<Response> {
                 .get("Idempotency-Key")?
                 .filter(|id| is_uuid(id))
                 .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?;
-            let body: Value = http::read_json(request, 2 * 1024 * 1024).await?;
+            let body: Value = http::read_json(request, 32 * 1024).await?;
             let entries = if suffix == "receipts" {
                 json!([body])
             } else {
+                if body.as_object().is_none_or(|fields| fields.len() != 1) {
+                    return Err(ApiError::domain("VALIDATION_ERROR", 422));
+                }
                 body["receipts"].clone()
             };
+            super::storage::receipt_entries(
+                entries
+                    .as_array()
+                    .ok_or_else(|| ApiError::domain("VALIDATION_ERROR", 422))?
+                    .clone(),
+            )?;
             let mut response = forward(
                 env,
                 Call {
