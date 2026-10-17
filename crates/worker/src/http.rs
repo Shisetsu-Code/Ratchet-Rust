@@ -132,10 +132,22 @@ pub async fn network_quota(request: &Request, env: &Env) -> ApiResult<()> {
     } else {
         "API_RATE_LIMITER"
     };
-    let key = request
+    let origin_key = request
         .headers()
         .get("CF-Connecting-IP")?
         .unwrap_or_else(|| "local-network".into());
+    // This is only an edge prefilter. The dedicated KDF pool is selected by
+    // auth_admission only after require_session/require_authorized succeeds.
+    // Public login traffic must not consume the reauthentication prefilter.
+    let reauth = matches!(
+        path.as_str(),
+        "/api/v1/auth/password/reauth"
+            | "/api/v1/auth/portable-key/reauth/prepare"
+            | "/api/v1/auth/portable-key/reauth/complete"
+            | "/api/v1/auth/passkey/reauth/options"
+            | "/api/v1/auth/passkey/reauth/verify"
+    );
+    let key = format!("{}:{origin_key}", if reauth { "reauth" } else { "public" });
     if !env.rate_limiter(binding)?.limit(key).await?.success {
         return Err(ApiError::domain("RATE_LIMITED", 429));
     }

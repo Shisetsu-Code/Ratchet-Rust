@@ -2,6 +2,7 @@ import {serverWireRequest} from "../crypto/server-message-transport";
 import type { IDBPDatabase } from 'idb';
 import type { RealtimeMessageAck } from '../../shared/contracts/realtime';
 import {
+  readChatOutboxBatch,
   sendPendingOutboxRecord,
   setOutboxTransportState,
   transitionOutboxRecord,
@@ -143,9 +144,7 @@ export async function resumePendingOutboxWsFirst(
   chatId: string,
   onResult?: (record: PendingOutboxRecord) => void,
 ): Promise<void> {
-  const records = (await db.getAllFromIndex('pending_outbox', 'by-chat', chatId))
-    .filter((record) => record.status === 'PENDING' || record.status === 'VERIFY_ACCEPTANCE')
-    .sort(compareRecoveryOrder);
+  const records = (await readChatOutboxBatch(db, chatId, ['PENDING', 'VERIFY_ACCEPTANCE'])).sort(compareRecoveryOrder);
 
   for (const record of records) {
     const result = await deliverPreparedMessageWsFirst(db, realtime, record);
@@ -226,7 +225,12 @@ async function waitForOrderedFallbackTurn(
   while (true) {
     const current = await db.get('pending_outbox', record.client_message_id);
     if (!current || isTerminal(current)) return false;
-    const records = await db.getAllFromIndex('pending_outbox', 'by-chat', record.chat_id);
+    const records: PendingOutboxRecord[] = [];
+    for (const status of ['FAILED', 'NEEDS_REENCRYPT', 'PENDING', 'VERIFY_ACCEPTANCE'] as const) {
+      const earlier = await db.getFromIndex('pending_outbox', 'by-chat-device-status-sequence', IDBKeyRange.bound(
+        [record.chat_id, record.sender_device_id, status, 0], [record.chat_id, record.sender_device_id, status, sequence], false, true));
+      if (earlier) records.push(earlier);
+    }
     let waiting = false;
     for (const candidate of records) {
       if (candidate.client_message_id === record.client_message_id

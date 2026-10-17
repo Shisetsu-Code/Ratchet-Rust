@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import WebSocket from 'ws';
-import {base,fixture,localSql,api} from './fixtures.mjs';
+import {base,fixture,localSql,api,edgeHeaders} from './fixtures.mjs';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const round=n=>Math.round(n*100)/100;
@@ -24,7 +24,7 @@ INSERT INTO chat_participants(chat_id,user_id,participant_role,joined_at) VALUES
 }
 
 async function open(chat,actor,{observe=false}={}){
-  const socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:actor.cookie,Origin:base}});
+  const socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:actor.cookie,Origin:base,...edgeHeaders}});
   const peer={socket,closed:null,acks:new Map(),nacks:new Map(),presented:new Map(),events:[],errors:[]};
   await new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>{socket.terminate();reject(new Error('Local WebSocket ready timed out'));},15000);
@@ -54,7 +54,7 @@ async function recover(chat,actor,expected,acks){let cursor=0,more=true;const ch
   assert.equal(changes.length,expected.size,'every durable ACK is recoverable through authenticated HTTP');const seen=new Set();for(const change of changes){assert.equal(change.type,'message');const id=change.client_message_id,want=expected.get(id);assert.ok(want,'no foreign recovery ID');assert.ok(!seen.has(id),'one durable row per client ID');seen.add(id);assert.equal(change.message_id,acks.get(id).message_id);assert.equal(change.revision,acks.get(id).revision);assert.equal(JSON.parse(Buffer.from(change.envelope.ciphertext,'base64url').toString()).text,want.text);}assert.deepEqual(changes.map(c=>c.revision),Array.from({length:expected.size},(_,i)=>i+1));return pages;
 }
 async function burst(label,sendersCount,perSender){const s=await scenario(sendersCount),peers=[];let probe;try{const observer=await open(s.chat,s.owner,{observe:true});peers.push(observer);const writers=await Promise.all(s.senders.map(a=>open(s.chat,a)));peers.push(...writers);const expected=new Map(),start=performance.now();for(let sequence=1;sequence<=perSender;sequence++)for(let i=0;i<writers.length;i++)queue(writers[i],s.chat,s.senders[i],sequence,label,expected);
-    if(process.env.RATCHET_LOAD_DIAGNOSTICS)probe=setInterval(async()=>{try{const r=await fetch(base+`/api/v1/chats/${s.chat}`,{headers:{Cookie:s.owner.cookie},signal:AbortSignal.timeout(2000)});console.log('LOAD_PROGRESS',r.status,await r.text(),peers.map(p=>({state:p.socket.readyState,acks:p.acks.size,shown:p.presented.size,nacks:p.nacks.size})));}catch(e){console.log('LOAD_PROGRESS_FAILED',e.message);}},5000);
+    if(process.env.RATCHET_LOAD_DIAGNOSTICS)probe=setInterval(async()=>{try{const r=await fetch(base+`/api/v1/chats/${s.chat}`,{headers:{Cookie:s.owner.cookie,...edgeHeaders},signal:AbortSignal.timeout(2000)});console.log('LOAD_PROGRESS',r.status,await r.text(),peers.map(p=>({state:p.socket.readyState,acks:p.acks.size,shown:p.presented.size,nacks:p.nacks.size})));}catch(e){console.log('LOAD_PROGRESS_FAILED',e.message);}},5000);
     await waitFor(()=>writers.reduce((n,p)=>n+p.acks.size,0)===expected.size&&observer.presented.size===expected.size,peers);const acks=validate(expected,writers,observer,label,start);
     observer.socket.terminate();const reconnect=await open(s.chat,s.owner);peers.push(reconnect);const pages=await recover(s.chat,s.owner,expected,acks);assert.equal(reconnect.socket.readyState,WebSocket.OPEN);
     for(let i=0;i<s.senders.length;i++){const sequence=await api(`/chats/${s.chat}/messages/sender-sequence`,{cookie:s.senders[i].cookie});assert.equal(sequence.status,200);assert.equal(sequence.value.next_sequence,perSender+1);}

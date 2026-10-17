@@ -5,6 +5,17 @@ import {DatabaseSync} from 'node:sqlite';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 
 export const base=process.env.RATCHET_TEST_BASE??'http://localhost:8797';
+// Miniflare models the trusted edge header locally. Independent contract files
+// represent distinct networks; every retry and identity in one file keeps the
+// same address, including the desktop-console child process. Never send these
+// synthetic headers to a deployed Worker.
+export function contractOriginHeaders(file=process.argv[1]??'contract-fixtures',origin=base){
+  const url=new URL(origin);
+  if(!['http:','https:'].includes(url.protocol)||!['localhost','127.0.0.1','[::1]'].includes(url.hostname))throw new Error('Synthetic edge addresses require a local contract server');
+  const hash=createHash('sha256').update('ratchet-contract-origin-v1:'+basename(file)).digest('hex').slice(0,24);
+  return{'CF-Connecting-IP':'2001:db8:'+hash.match(/.{4}/g).join(':')};
+}
+export const edgeHeaders=Object.freeze(contractOriginHeaders());
 async function databasePath(){
   const state=resolve(process.env.RATCHET_TEST_STATE);
   assert.equal(dirname(state),resolve('.wrangler'));assert.match(basename(state),/^c-[a-f0-9]{8}$/);
@@ -33,7 +44,7 @@ INSERT INTO sessions(session_id,secret_hash,user_id,device_id,created_at,last_se
   return{workspace_id,user_id,device_id,session_id,cookie:'__Host-session='+secret};
 }
 export async function api(path,{body,method=body?'POST':'GET',cookie='',headers={}}={}){
-  const response=await fetch(base+'/api/v1'+path,{method,headers:{Origin:base,...(body?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...headers},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(60000)});
+  const response=await fetch(base+'/api/v1'+path,{method,headers:{Origin:base,...edgeHeaders,...(body?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...headers},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(60000)});
   const raw=await response.text();let value;try{value=JSON.parse(raw);}catch{value=raw;}
   return{status:response.status,headers:response.headers,value};
 }

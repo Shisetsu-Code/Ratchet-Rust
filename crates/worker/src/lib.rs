@@ -1,5 +1,6 @@
 //! Cloudflare runtime adapter. Domain code lives in ratchet-core.
 mod auth;
+mod auth_admission;
 mod bootstrap;
 mod chat;
 pub use chat::ChatRealtime;
@@ -16,6 +17,12 @@ use worker::*;
 
 #[event(scheduled)]
 pub async fn scheduled(_event: ScheduledEvent, env: Env, _ctx: ScheduleContext) {
+    if auth_admission::maintenance(&env).await.is_err() {
+        console_error!("Scheduled authentication cleanup failed");
+    }
+    if chat::capacity::maintenance(&env).await.is_err() {
+        console_error!("Scheduled storage reconciliation failed");
+    }
     if files::maintenance(&env).await.is_err() {
         console_error!("Scheduled file cleanup failed");
     }
@@ -90,6 +97,9 @@ async fn handle(request: &mut Request, env: &Env) -> http::ApiResult<Response> {
     }
     if request.method() == Method::Post {
         match request.path().as_str() {
+            "/api/v1/auth/password/challenge" => {
+                return auth_admission::password_challenge(request, env).await;
+            }
             "/api/v1/auth/portable-key/login/prepare" => {
                 return portable::prepare(request, env, false).await;
             }

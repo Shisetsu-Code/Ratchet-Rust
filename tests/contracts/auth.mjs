@@ -5,6 +5,7 @@ import {readdir} from 'node:fs/promises';
 import {join,resolve,basename,dirname} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import WebSocket from 'ws';
+import {edgeHeaders} from './fixtures.mjs';
 
 const base=process.env.RATCHET_TEST_BASE??'http://localhost:8797';
 const token=process.env.RATCHET_TEST_BOOTSTRAP_TOKEN;
@@ -14,7 +15,7 @@ const deviceId=randomUUID();
 const password='Test-only strong password 2026!';
 
 async function request(path,{body,method=body?'POST':'GET',origin=base,session=cookie,headers={}}={}){
-  const result=await fetch(base+'/api/v1'+path,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(origin?{Origin:origin}:{}),...(session?{Cookie:session}:{}),...headers},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(60000)});
+  const result=await fetch(base+'/api/v1'+path,{method,headers:{...edgeHeaders,...(body?{'Content-Type':'application/json'}:{}),...(origin?{Origin:origin}:{}),...(session?{Cookie:session}:{}),...headers},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(60000)});
   const text=await result.text();let value;try{value=JSON.parse(text);}catch{value=text;}
   return{status:result.status,headers:result.headers,value};
 }
@@ -114,8 +115,9 @@ INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`;
   const customerCookie='__Host-session='+secret;
   const open=async session=>{
     // Bound TCP cleanup after the peer's Close frame; still assert its actual 4001 code.
-    const socket=new WebSocket(base.replace('http','ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:session,Origin:base}});const events=[];
+    const socket=new WebSocket(base.replace('http','ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:session,Origin:base,...edgeHeaders}});const events=[];
     socket.on('message',data=>events.push({...JSON.parse(data.toString()),received_ms:performance.now()}));
+    socket.on('close',(code,reason)=>events.push({type:'socket.closed',code,reason:reason.toString(),received_ms:performance.now()}));
     await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('WebSocket ready timeout')),10000);socket.on('message',data=>{if(JSON.parse(data.toString()).type==='realtime.ready'){clearTimeout(timer);resolve();}});socket.once('error',reject);});
     return{socket,events};
   };
@@ -145,7 +147,7 @@ INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`;
     const ping=async peer=>{
       const before=peer.events.filter(e=>e.type==='pong').length;peer.socket.send(JSON.stringify({type:'ping'}));
       const deadline=Date.now()+5000;while(Date.now()<deadline&&peer.events.filter(e=>e.type==='pong').length===before)await new Promise(resolve=>setTimeout(resolve,10));
-      assert.equal(peer.socket.readyState,WebSocket.OPEN);assert.equal(peer.events.filter(e=>e.type==='pong').length,before+1);
+      assert.equal(peer.socket.readyState,WebSocket.OPEN,JSON.stringify(peer.events.filter(e=>e.type==='socket.closed')));assert.equal(peer.events.filter(e=>e.type==='pong').length,before+1);
     };
     const login=async()=>{
       const result=await request('/auth/password/login',{body:{login_name:'owner-test',password,device:{mode:'existing',device_id:deviceId}}});
@@ -154,7 +156,7 @@ INSERT INTO chat_revisions(chat_id) VALUES('${chat}');`;
       return (await request('/sessions/current')).value.session_id;
     };
     const withCustomerPings=async action=>{
-      const timer=setInterval(()=>{if(recipient.socket.readyState===WebSocket.OPEN)recipient.socket.send(JSON.stringify({type:'ping'}));},3);
+      const timer=setInterval(()=>{if(recipient.socket.readyState===WebSocket.OPEN)recipient.socket.send(JSON.stringify({type:'ping'}));},100);
       try{return await action();}finally{clearInterval(timer);}
     };
     const logoutClosed=waitClosed(sender.socket);

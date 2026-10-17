@@ -25,7 +25,7 @@ from typing import Any
 
 try:
     import tkinter as tk
-    from tkinter import filedialog, messagebox, ttk
+    from tkinter import filedialog, messagebox, simpledialog, ttk
 except ImportError as exc:  # pragma: no cover - depends on the Python distribution
     raise SystemExit("Esta instalación de Python no incluye Tkinter.") from exc
 
@@ -100,12 +100,23 @@ def read_saved_token() -> str:
     return os.environ.get("RATCHET_RUST_BOOTSTRAP_TOKEN", "").strip()
 
 
+def validate_key_password(account_password: str, key_password: str | None) -> str:
+    if not isinstance(key_password, str) or not 15 <= len(key_password) <= 256:
+        raise SetupError("La contraseña local de la llave debe tener entre 15 y 256 caracteres.")
+    if secrets.compare_digest(account_password.encode('utf-8'), key_password.encode('utf-8')):
+        raise SetupError("Usá una contraseña local de llave diferente de la contraseña de la cuenta.")
+    return key_password
+
+
 def create_key_document(password: str) -> tuple[dict[str, object], Ed25519PrivateKey]:
-    seed = bytearray(secrets.token_bytes(32))
+    private_key = Ed25519PrivateKey.generate()
+    return encrypt_key_document(private_key, str(uuid.uuid4()), password), private_key
+
+
+def encrypt_key_document(private_key: Ed25519PrivateKey, key_id: str, password: str) -> dict[str, object]:
+    seed = bytearray(private_key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()))
     salt = secrets.token_bytes(16)
     iv = secrets.token_bytes(12)
-    key_id = str(uuid.uuid4())
-    private_key = Ed25519PrivateKey.from_private_bytes(bytes(seed))
     public_key = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
@@ -131,7 +142,7 @@ def create_key_document(password: str) -> tuple[dict[str, object], Ed25519Privat
         for index in range(len(plaintext)):
             plaintext[index] = 0
     document = {**metadata, "cipher": {**metadata["cipher"], "ciphertext": b64url(ciphertext)}}
-    return document, private_key
+    return document
 
 
 def unlock_key_file(path: Path, password: str) -> tuple[str, Ed25519PrivateKey]:
@@ -213,13 +224,59 @@ def write_key_file(path: Path, document: dict[str, object]) -> None:
             os.chmod(temporary_name, 0o600)
         except OSError:
             pass
-        os.replace(temporary_name, path)
+        try:
+            # Same-directory hard linking publishes the fully flushed file
+            # atomically and refuses to replace an existing recovery key.
+            os.link(temporary_name, path)
+        except FileExistsError as exc:
+            raise SetupError("Ese archivo ya existe. Elegí otro para conservar la llave anterior.") from exc
+        os.unlink(temporary_name)
     except BaseException:
         try:
             os.unlink(temporary_name)
         except OSError:
             pass
         raise
+
+
+def rewrap_key_file(path: Path, old_password: str, key_password: str, output: Path) -> None:
+    validate_key_password(old_password, key_password)
+    key_id, private_key = unlock_key_file(path, old_password)
+    try:
+        document = encrypt_key_document(private_key, key_id, key_password)
+        write_key_file(output, document)
+        # Verify the new file before reporting success, preserving the original.
+        restored_id, restored = unlock_key_file(output, key_password)
+        if restored_id != key_id or restored.sign(b'ratchet-local-key-migration') != private_key.sign(b'ratchet-local-key-migration'):
+            raise SetupError("No se pudo verificar la copia cifrada de la llave.")
+        del restored
+    finally:
+        del private_key
+
+
+def rewrap_dialog(parent: tk.Misc) -> None:
+    selected = filedialog.askopenfilename(parent=parent, title="Llave existente para cambiar su contraseña local", filetypes=[("Llave Ratchet", "*.ratchet-key")])
+    if not selected:
+        return
+    old = simpledialog.askstring("Contraseña actual", "Contraseña que actualmente cifra este archivo:", show="•", parent=parent)
+    if old is None:
+        return
+    new = simpledialog.askstring("Nueva contraseña local", "Nueva contraseña de llave (diferente de la contraseña de la cuenta):", show="•", parent=parent)
+    if new is None:
+        return
+    confirmation = simpledialog.askstring("Confirmar contraseña local", "Repetí la nueva contraseña de la llave:", show="•", parent=parent)
+    if new != confirmation:
+        messagebox.showerror("Contraseñas distintas", "La confirmación no coincide.", parent=parent)
+        return
+    output = filedialog.asksaveasfilename(parent=parent, title="Guardar una nueva copia cifrada", defaultextension=".ratchet-key", filetypes=[("Llave Ratchet", "*.ratchet-key")])
+    if not output:
+        return
+    try:
+        rewrap_key_file(Path(selected), old, new, Path(output))
+    except (SetupError, OSError) as exc:
+        messagebox.showerror("No se completó el cambio local", str(exc), parent=parent)
+        return
+    messagebox.showinfo("Nueva copia verificada", "La copia nueva usa la nueva contraseña local y conserva la identidad de la llave. El original permanece intacto. Una copia anterior expuesta sigue siendo válida: en ese caso hay que rotar y revocar la llave en el servidor.", parent=parent)
 
 
 def post_json(origin: str, path: str, payload: dict[str, object], *, max_response_bytes: int = MAX_RESPONSE_BYTES, safe_errors: bool = False) -> dict[str, object]:
@@ -261,8 +318,9 @@ def post_json(origin: str, path: str, payload: dict[str, object], *, max_respons
     return value
 
 
-def provision_owner(origin: str, token: str, login_name: str, password: str, output: Path) -> dict[str, object]:
-    document, private_key = create_key_document(password)
+def provision_owner(origin: str, token: str, login_name: str, password: str, output: Path, *, key_password: str | None = None) -> dict[str, object]:
+    key_password = validate_key_password(password, key_password)
+    document, private_key = create_key_document(key_password)
     write_key_file(output, document)
     challenge = post_json(origin, "/api/v1/bootstrap/portable-key/prepare", {
         "bootstrap_token": token,
@@ -300,7 +358,9 @@ def provision_admin(
     login_name: str,
     password: str,
     output: Path,
+    *, key_password: str | None = None,
 ) -> dict[str, object]:
+    key_password = validate_key_password(password, key_password)
     owner_key_id, owner_private_key = unlock_key_file(owner_key_path, owner_key_password)
     challenge = post_json(origin, "/api/v1/admin-provisioning/portable-key/prepare", {
         "bootstrap_token": token,
@@ -324,7 +384,7 @@ def provision_admin(
         str(challenge["key_id"]),
     ]).encode("utf-8")
     signature = b64url(owner_private_key.sign(message))
-    document, admin_private_key = create_key_document(password)
+    document, admin_private_key = create_key_document(key_password)
     write_key_file(output, document)
     del admin_private_key
     return post_json(origin, "/api/v1/admin-provisioning/portable-key/complete", {
@@ -348,6 +408,8 @@ class OwnerSetupApp:
         self.login = tk.StringVar(value="owner")
         self.password = tk.StringVar()
         self.confirmation = tk.StringVar()
+        self.key_password = tk.StringVar()
+        self.key_confirmation = tk.StringVar()
         self._automatic_output = Path.home() / "Documents" / key_filename(self.login.get(), "owner")
         self.output = tk.StringVar(value=str(self._automatic_output))
         self.login.trace_add("write", self._sync_output_name)
@@ -363,20 +425,23 @@ class OwnerSetupApp:
             ("Token de instalación", self.token, True),
             ("Usuario owner", self.login, False),
             ("Contraseña maestra", self.password, True),
-            ("Confirmar contraseña", self.confirmation, True),
+            ("Confirmar contraseña de cuenta", self.confirmation, True),
+            ("Contraseña local de la llave", self.key_password, True),
+            ("Confirmar contraseña de llave", self.key_confirmation, True),
         ]
         for row, (label, variable, secret) in enumerate(fields, start=1):
             ttk.Label(frame, text=label).grid(row=row, column=0, sticky="w", pady=4)
             ttk.Entry(frame, textvariable=variable, width=58, show="•" if secret else "").grid(row=row, column=1, columnspan=2, sticky="ew", pady=4)
-        ttk.Label(frame, text="Guardar llave en").grid(row=6, column=0, sticky="w", pady=4)
-        ttk.Entry(frame, textvariable=self.output, width=48).grid(row=6, column=1, sticky="ew", pady=4)
-        ttk.Button(frame, text="Elegir…", command=self._choose_output).grid(row=6, column=2, padx=(8, 0), pady=4)
-        ttk.Label(frame, textvariable=self.status, wraplength=540).grid(row=7, column=0, columnspan=3, sticky="w", pady=(12, 8))
+        ttk.Label(frame, text="Guardar llave en").grid(row=8, column=0, sticky="w", pady=4)
+        ttk.Entry(frame, textvariable=self.output, width=48).grid(row=8, column=1, sticky="ew", pady=4)
+        ttk.Button(frame, text="Elegir…", command=self._choose_output).grid(row=8, column=2, padx=(8, 0), pady=4)
+        ttk.Label(frame, textvariable=self.status, wraplength=540).grid(row=9, column=0, columnspan=3, sticky="w", pady=(12, 8))
         self.submit = ttk.Button(frame, text="Crear owner y llave cifrada", command=self._start)
-        self.submit.grid(row=8, column=0, columnspan=3, sticky="ew")
-        ttk.Separator(frame).grid(row=9, column=0, columnspan=3, sticky="ew", pady=14)
-        ttk.Button(frame, text="Crear una cuenta ADMIN adicional…", command=self._open_admin).grid(row=10, column=0, columnspan=3, sticky="ew")
-        ttk.Button(frame, text="Recuperar cuentas y consultar conversaciones…", command=lambda: open_console(self.root, self.server.get())).grid(row=11, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+        self.submit.grid(row=10, column=0, columnspan=3, sticky="ew")
+        ttk.Separator(frame).grid(row=11, column=0, columnspan=3, sticky="ew", pady=14)
+        ttk.Button(frame, text="Cambiar contraseña local de una llave…", command=lambda: rewrap_dialog(self.root)).grid(row=14, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+        ttk.Button(frame, text="Crear una cuenta ADMIN adicional…", command=self._open_admin).grid(row=12, column=0, columnspan=3, sticky="ew")
+        ttk.Button(frame, text="Recuperar cuentas y consultar conversaciones…", command=lambda: open_console(self.root, self.server.get())).grid(row=13, column=0, columnspan=3, sticky="ew", pady=(8, 0))
 
     def _open_admin(self) -> None:
         window = tk.Toplevel(self.root)
@@ -404,6 +469,9 @@ class OwnerSetupApp:
             token = self.token.get().strip()
             login = self.login.get().strip()
             password = self.password.get()
+            key_password = validate_key_password(password, self.key_password.get())
+            if key_password != self.key_confirmation.get():
+                raise SetupError("Las contraseñas locales de la llave no coinciden.")
             output = Path(self.output.get()).expanduser()
             if not 32 <= len(token) <= 512:
                 raise SetupError("El token de instalación no es válido.")
@@ -422,11 +490,11 @@ class OwnerSetupApp:
             return
         self.submit.state(["disabled"])
         self.status.set("Creando la llave y registrando el owner…")
-        threading.Thread(target=self._run, args=(origin, token, login, password, output), daemon=True).start()
+        threading.Thread(target=self._run, args=(origin, token, login, password, output, key_password), daemon=True).start()
 
-    def _run(self, origin: str, token: str, login: str, password: str, output: Path) -> None:
+    def _run(self, origin: str, token: str, login: str, password: str, output: Path, key_password: str) -> None:
         try:
-            result = provision_owner(origin, token, login, password, output)
+            result = provision_owner(origin, token, login, password, output, key_password=key_password)
             if not all(isinstance(result.get(field), str) for field in ("user_id", "workspace_id", "key_id")):
                 raise SetupError("El alta terminó, pero la confirmación del servidor es inválida.")
             self.root.after(0, self._success, output)
@@ -437,6 +505,8 @@ class OwnerSetupApp:
     def _success(self, output: Path) -> None:
         self.password.set("")
         self.confirmation.set("")
+        self.key_password.set("")
+        self.key_confirmation.set("")
         self.status.set(f"Owner creado. Llave guardada en: {output}")
         messagebox.showinfo("Owner creado", "El owner fue creado correctamente. Ya podés importar la llave en la pantalla normal de ingreso.")
         self.submit.state(["!disabled"])
@@ -459,6 +529,8 @@ class AdminSetupApp:
         self.login = tk.StringVar()
         self.password = tk.StringVar()
         self.confirmation = tk.StringVar()
+        self.key_password = tk.StringVar()
+        self.key_confirmation = tk.StringVar()
         self._automatic_output = Path.home() / "Documents" / key_filename(self.login.get(), "admin")
         self.output = tk.StringVar(value=str(self._automatic_output))
         self.login.trace_add("write", self._sync_output_name)
@@ -484,17 +556,19 @@ class AdminSetupApp:
         for row, (label, variable, secret) in enumerate([
             ("Usuario ADMIN nuevo", self.login, False),
             ("Contraseña ADMIN nueva", self.password, True),
-            ("Confirmar contraseña", self.confirmation, True),
+            ("Confirmar contraseña de cuenta", self.confirmation, True),
+            ("Contraseña local de la llave", self.key_password, True),
+            ("Confirmar contraseña de llave", self.key_confirmation, True),
         ], start=5):
             ttk.Label(frame, text=label).grid(row=row, column=0, sticky="w", pady=4)
             ttk.Entry(frame, textvariable=variable, width=58, show="•" if secret else "").grid(row=row, column=1, columnspan=2, sticky="ew", pady=4)
-        ttk.Label(frame, text="Guardar llave ADMIN en").grid(row=8, column=0, sticky="w", pady=4)
-        ttk.Entry(frame, textvariable=self.output, width=48).grid(row=8, column=1, sticky="ew", pady=4)
-        ttk.Button(frame, text="Elegir…", command=self._choose_output).grid(row=8, column=2, padx=(8, 0), pady=4)
-        ttk.Label(frame, textvariable=self.status, wraplength=580).grid(row=9, column=0, columnspan=3, sticky="w", pady=(12, 8))
+        ttk.Label(frame, text="Guardar llave ADMIN en").grid(row=10, column=0, sticky="w", pady=4)
+        ttk.Entry(frame, textvariable=self.output, width=48).grid(row=10, column=1, sticky="ew", pady=4)
+        ttk.Button(frame, text="Elegir…", command=self._choose_output).grid(row=10, column=2, padx=(8, 0), pady=4)
+        ttk.Label(frame, textvariable=self.status, wraplength=580).grid(row=11, column=0, columnspan=3, sticky="w", pady=(12, 8))
         self.submit = ttk.Button(frame, text="Crear ADMIN y llave cifrada", command=self._start)
-        self.submit.grid(row=10, column=0, columnspan=3, sticky="ew")
-        ttk.Button(frame, text="Consola exclusiva del owner…", command=lambda: open_console(self.root, self.server.get(), self.owner_key.get())).grid(row=11, column=0, columnspan=3, sticky="ew", pady=(8, 0))
+        self.submit.grid(row=12, column=0, columnspan=3, sticky="ew")
+        ttk.Button(frame, text="Consola exclusiva del owner…", command=lambda: open_console(self.root, self.server.get(), self.owner_key.get())).grid(row=13, column=0, columnspan=3, sticky="ew", pady=(8, 0))
 
     def _choose_owner_key(self) -> None:
         selected = filedialog.askopenfilename(
@@ -528,6 +602,9 @@ class AdminSetupApp:
             owner_password = self.owner_password.get()
             login = self.login.get().strip()
             password = self.password.get()
+            key_password = validate_key_password(password, self.key_password.get())
+            if key_password != self.key_confirmation.get():
+                raise SetupError("Las contraseñas locales de la llave no coinciden.")
             output = Path(self.output.get()).expanduser()
             if not 32 <= len(token) <= 512:
                 raise SetupError("El token de instalación no es válido.")
@@ -552,13 +629,13 @@ class AdminSetupApp:
         self.status.set("Verificando al owner y creando la cuenta ADMIN…")
         threading.Thread(
             target=self._run,
-            args=(origin, token, owner_key, owner_password, login, password, output),
+            args=(origin, token, owner_key, owner_password, login, password, output, key_password),
             daemon=True,
         ).start()
 
-    def _run(self, origin: str, token: str, owner_key: Path, owner_password: str, login: str, password: str, output: Path) -> None:
+    def _run(self, origin: str, token: str, owner_key: Path, owner_password: str, login: str, password: str, output: Path, key_password: str) -> None:
         try:
-            result = provision_admin(origin, token, owner_key, owner_password, login, password, output)
+            result = provision_admin(origin, token, owner_key, owner_password, login, password, output, key_password=key_password)
             if result.get("role") != "ADMIN" or not all(isinstance(result.get(field), str) for field in ("user_id", "workspace_id", "key_id")):
                 raise SetupError("El alta terminó, pero la confirmación del servidor es inválida.")
             self.root.after(0, self._success, output)
@@ -570,6 +647,8 @@ class AdminSetupApp:
         self.owner_password.set("")
         self.password.set("")
         self.confirmation.set("")
+        self.key_password.set("")
+        self.key_confirmation.set("")
         self.status.set(f"ADMIN creado. Llave guardada en: {output}")
         messagebox.showinfo("ADMIN creado", "La cuenta ADMIN fue creada por el owner. Entregale su usuario, contraseña y llave cifrada por canales seguros separados.", parent=self.root)
         self.submit.state(["!disabled"])

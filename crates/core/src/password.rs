@@ -60,3 +60,28 @@ pub fn verify_password(password: &str, credential: &Credential) -> bool {
     };
     bool::from(actual.as_slice().ct_eq(expected.as_slice()))
 }
+
+/// Use only after admission: real, legacy, missing and malformed credentials
+/// spend the same PBKDF2 iteration budget. A rate-rejected request must never
+/// call this function merely to equalize its response timing.
+pub fn verify_password_uniform(password: &str, credential: Option<&Credential>) -> bool {
+    let supported = credential.filter(|credential| {
+        credential.algorithm == "PBKDF2-SHA256"
+            && (1..=PASSWORD_ITERATIONS).contains(&credential.iterations)
+            && URL_SAFE_NO_PAD
+                .decode(&credential.salt)
+                .is_ok_and(|salt| !salt.is_empty() && salt.len() <= 64)
+            && URL_SAFE_NO_PAD
+                .decode(&credential.verifier)
+                .is_ok_and(|verifier| verifier.len() == 32)
+    });
+    let spent = supported.map_or(0, |credential| credential.iterations);
+    let valid = supported.is_some_and(|credential| verify_password(password, credential));
+    if spent < PASSWORD_ITERATIONS {
+        // A fixed-size dummy salt and zeroized output keep legacy padding and
+        // unknown-account work independent of the supplied account name.
+        let padding = derive_verifier(password, &[0; 16], PASSWORD_ITERATIONS - spent);
+        let _ = std::hint::black_box(padding);
+    }
+    valid
+}

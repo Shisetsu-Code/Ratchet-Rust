@@ -2,13 +2,13 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import WebSocket from 'ws';
-import {base,fixture,localSql,api} from './fixtures.mjs';
+import {base,fixture,localSql,api,edgeHeaders} from './fixtures.mjs';
 
 async function scenario(t){
   const actor=await fixture(),chat=randomUUID(),now=new Date().toISOString();
   await localSql(`INSERT INTO chats(chat_id,workspace_id,created_by_user_id,owner_admin_user_id,created_at) VALUES('${chat}','${actor.workspace_id}','${actor.user_id}','${actor.user_id}','${now}');`);
   async function connect(){
-    const socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:actor.cookie,Origin:base}});
+    const socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:actor.cookie,Origin:base,...edgeHeaders}});
     const peer={socket,events:[],errors:[]};t.after(()=>socket.terminate());
     socket.on('message',raw=>{try{peer.events.push(JSON.parse(raw.toString()));}catch(error){peer.errors.push(error);}});
     socket.on('error',error=>peer.errors.push(error));

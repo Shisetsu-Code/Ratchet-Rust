@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import WebSocket from 'ws';
-import {base,fixture,api,localSql} from './fixtures.mjs';
+import {base,fixture,api,localSql,edgeHeaders} from './fixtures.mjs';
 
 const device=()=>({device_id:randomUUID(),display_name:'Synthetic access browser',crypto_identity_public_key:'A'.repeat(43)});
 const cookie=r=>r.headers.get('Set-Cookie')?.split(';')[0];
@@ -78,7 +78,7 @@ test('operator account creation cannot replace a preexisting customer password w
 test('changing a staff display name refreshes an already open WebSocket lease',async()=>{
  const a=await fixture(),chat=randomUUID(),now=new Date().toISOString();
  await localSql(`INSERT INTO chats(chat_id,workspace_id,created_by_user_id,owner_admin_user_id,created_at) VALUES('${chat}','${a.workspace_id}','${a.user_id}','${a.user_id}','${now}');`);
- const events=[],socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:a.cookie,Origin:base}});
+ const events=[],socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${chat}/realtime`,{closeTimeout:1000,headers:{Cookie:a.cookie,Origin:base,...edgeHeaders}});
  try{
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('WSS ready timeout')),10000);socket.on('error',reject);socket.on('message',raw=>{const e=JSON.parse(raw);events.push(e);if(e.type==='realtime.ready'){clearTimeout(timer);resolve();}});});
   const send=async(sequence,expected)=>{

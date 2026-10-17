@@ -289,6 +289,40 @@ impl ChatRealtime {
                 }
             }
         }
+        // Reserve the entire ready batch after attachment I/O. No other send
+        // batch can consume this headroom while the commit lane is held.
+        let (required_bytes, required_rows) = staged
+            .iter()
+            .filter(|(_, prepared)| !prepared.duplicate)
+            .filter_map(|(_, prepared)| prepared.row.as_ref())
+            .map(Store::message_growth)
+            .fold((0, 0), |(bytes, rows), (more_bytes, more_rows)| {
+                (bytes + more_bytes, rows + more_rows)
+            });
+        let capacity_error = if required_rows > 0 {
+            let started = batch.now();
+            let result = self
+                .store
+                .ensure_capacity_for(
+                    &self.env,
+                    &staged[0].0.meta.chat_id,
+                    required_bytes,
+                    required_rows,
+                )
+                .await;
+            batch.record("capacity_reservation", started);
+            result.err().map(|error| match error {
+                ApiError::Domain(error) => error,
+                ApiError::Runtime(_) => {
+                    let mut error =
+                        ratchet_core::error::DomainError::new("STORAGE_CAPACITY_UNAVAILABLE", 503);
+                    error.retryable = true;
+                    error
+                }
+            })
+        } else {
+            None
+        };
         let mut accepted = Vec::new();
         let mut rejected = Vec::new();
         // No await from the first write through reserving the publication lane.
@@ -303,6 +337,11 @@ impl ChatRealtime {
                 }
                 if !lease_current(prepared.lease.until, Date::now().as_millis() as f64) {
                     return Err(ApiError::domain("SESSION_INVALID", 401));
+                }
+                if !prepared.duplicate
+                    && let Some(error) = &capacity_error
+                {
+                    return Err(ApiError::Domain(error.clone()));
                 }
                 self.store.commit(
                     prepared

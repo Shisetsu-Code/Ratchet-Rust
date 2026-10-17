@@ -1,17 +1,17 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID,createECDH,randomBytes,createHash} from 'node:crypto';
-import {base,fixture,localSql,api} from './fixtures.mjs';
+import {base,fixture,localSql,api,edgeHeaders} from './fixtures.mjs';
 test('attachments wallpaper and push require an authenticated authorized device',async()=>{
   for(const path of ['/attachments/11111111-1111-4111-8111-111111111111','/chats/11111111-1111-4111-8111-111111111111/wallpaper','/push/config']){
-    const response=await fetch(base+'/api/v1'+path);
+    const response=await fetch(base+'/api/v1'+path,{headers:{...edgeHeaders}});
     assert.equal(response.status,401,path);
     assert.equal((await response.json()).type,'SESSION_REQUIRED',path);
   }
 });
 
 async function room(){const actor=await fixture(),chat=randomUUID(),now=new Date().toISOString();await localSql(`INSERT INTO chats(chat_id,workspace_id,created_by_user_id,owner_admin_user_id,created_at) VALUES('${chat}','${actor.workspace_id}','${actor.user_id}','${actor.user_id}','${now}');`);return{...actor,chat};}
-async function binary(path,actor,bytes,headers={}){const response=await fetch(base+'/api/v1'+path,{method:'PUT',headers:{Origin:base,Cookie:actor.cookie,...headers},body:bytes});const raw=await response.text();let value;try{value=JSON.parse(raw);}catch{value=raw;}return{status:response.status,value};}
+async function binary(path,actor,bytes,headers={}){const response=await fetch(base+'/api/v1'+path,{method:'PUT',headers:{Origin:base,...edgeHeaders,Cookie:actor.cookie,...headers},body:bytes});const raw=await response.text();let value;try{value=JSON.parse(raw);}catch{value=raw;}return{status:response.status,value};}
 test('pending devices cannot access file wallpaper or push metadata',async()=>{
   const a=await room();await localSql(`UPDATE devices SET authorized_at=NULL WHERE device_id='${a.device_id}';`);
   for(const path of [`/attachments/${randomUUID()}`,`/chats/${a.chat}/wallpaper`,'/push/config']){const result=await api(path,{cookie:a.cookie});assert.equal(result.status,403);assert.equal(result.value.type,'DEVICE_PENDING_APPROVAL');}
@@ -48,7 +48,7 @@ test('message commit claims a ready file once and supports authenticated byte ra
   assert.equal((await api(`/attachments/${id}`,{cookie})).value.status,'COMMITTED');
   assert.equal((await api(`/attachments/${id}`,{cookie,method:'DELETE'})).status,409);
   const reused=await api(`/chats/${a.chat}/messages`,{cookie,body:make(2)});assert.equal(reused.status,409);assert.equal(reused.value.type,'ATTACHMENT_NOT_READY');
-  const content=await fetch(base+`/api/v1/attachments/${id}/content`,{headers:{Cookie:cookie,Range:'bytes=4-11'}});assert.equal(content.status,206);assert.equal(content.headers.get('Content-Range'),'bytes 4-11/64');assert.deepEqual(Buffer.from(await content.arrayBuffer()),bytes.subarray(4,12));
+  const content=await fetch(base+`/api/v1/attachments/${id}/content`,{headers:{...edgeHeaders,Cookie:cookie,Range:'bytes=4-11'}});assert.equal(content.status,206);assert.equal(content.headers.get('Content-Range'),'bytes 4-11/64');assert.deepEqual(Buffer.from(await content.arrayBuffer()),bytes.subarray(4,12));
   const invalid=await api(`/attachments/${id}/content`,{cookie,headers:{Range:'bytes=90-'}});assert.equal(invalid.status,416);
   const foreign=await fixture();assert.equal((await api(`/attachments/${id}/content`,{cookie:foreign.cookie})).status,404);
 });
@@ -63,7 +63,7 @@ test('wallpaper is shared by owner account, custom ciphertext requires the curre
   const body={manifest:{protocol:'ratchet-wallpaper-e2ee',version:1,wallpaper_id:id,workspace_id:a.workspace_id,owner_admin_user_id:a.user_id,signer_device_id:a.device_id,content_type:'image/png',image_nonce_b64url:'A'.repeat(32),ciphertext_sha256_b64url:createHash('sha256').update(ciphertext).digest('base64url')},signature_b64url:'A'.repeat(86),envelopes};
   const committed=await api(`/chats/${a.chat}/wallpaper/uploads/${id}/commit`,{cookie,body});assert.equal(committed.status,200,JSON.stringify(committed.value));assert.equal(committed.value.kind,'custom');
   const refreshed=await api(`/chats/${a.chat}/wallpaper/${id}/envelopes`,{cookie,body:{wallpaper_id:id,envelopes}});assert.equal(refreshed.status,204,JSON.stringify(refreshed.value));
-  const downloaded=await fetch(base+`/api/v1/chats/${second}/wallpaper/image`,{headers:{Cookie:cookie}});assert.equal(downloaded.status,200);assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),ciphertext);
+  const downloaded=await fetch(base+`/api/v1/chats/${second}/wallpaper/image`,{headers:{...edgeHeaders,Cookie:cookie}});assert.equal(downloaded.status,200);assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),ciphertext);
   const wrong={...body,manifest:{...body.manifest,owner_admin_user_id:randomUUID()}};assert.equal((await api(`/chats/${a.chat}/wallpaper/uploads/${id}/commit`,{cookie,body:wrong})).status,422);
   assert.equal((await binary(`/chats/${a.chat}/wallpaper/uploads/${id}/image`,a,ciphertext)).status,409);
 });

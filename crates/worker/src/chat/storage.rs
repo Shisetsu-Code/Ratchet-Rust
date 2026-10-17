@@ -6,7 +6,11 @@ use ratchet_core::{
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 use worker::{
     Date, SqlStorage, SqlStorageValue as S, Storage, js_sys,
     wasm_bindgen::{JsCast, JsValue, closure::Closure},
@@ -43,6 +47,15 @@ pub struct Commit {
 pub struct Store {
     storage: Storage,
     sql: SqlStorage,
+    capacity_checked: Cell<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct Usage {
+    pub bytes: u64,
+    pub rows: u64,
+    pub byte_limit: u64,
+    pub row_limit: u64,
 }
 
 // Durable SQLite returns ArrayBuffer for BLOB columns, not a JavaScript array.
@@ -105,7 +118,11 @@ fn commit_result(row: &Record, duplicate: bool) -> Commit {
 impl Store {
     pub fn new(storage: Storage) -> Self {
         let sql = storage.sql();
-        Self { storage, sql }
+        Self {
+            storage,
+            sql,
+            capacity_checked: Cell::new(false),
+        }
     }
     pub fn initialize(&self) -> ApiResult<()> {
         for query in [
@@ -118,7 +135,112 @@ impl Store {
         ] {
             self.sql.exec(query, None)?;
         }
+        // Add columns without recreating or dropping an existing durable table.
+        #[derive(Deserialize)]
+        struct Column {
+            name: String,
+        }
+        let columns = all::<Column>(&self.sql, "PRAGMA table_info(receipt_requests)", vec![])?;
+        if !columns.iter().any(|c| c.name == "expires_at") {
+            self.sql.exec(
+                "ALTER TABLE receipt_requests ADD COLUMN expires_at INTEGER",
+                None,
+            )?;
+        }
+        for query in include_str!("storage-quota.sql")
+            .split("-- statement-break")
+            .filter(|s| !s.trim().is_empty())
+        {
+            self.sql.exec(query, None)?;
+        }
+        self.sql.exec(
+            "CREATE INDEX IF NOT EXISTS receipt_request_expiry ON receipt_requests(expires_at)",
+            None,
+        )?;
+        self.sql.exec(
+            "CREATE TABLE IF NOT EXISTS receipt_quota(user_id TEXT NOT NULL,at INTEGER NOT NULL)",
+            None,
+        )?;
+        self.sql.exec(
+            "CREATE INDEX IF NOT EXISTS receipt_quota_user_time ON receipt_quota(user_id,at)",
+            None,
+        )?;
         Ok(())
+    }
+    pub fn usage(&self) -> ApiResult<Usage> {
+        one(
+            &self.sql,
+            "SELECT bytes,rows,byte_limit,row_limit FROM storage_usage WHERE id=1",
+            vec![],
+        )
+    }
+    pub async fn ensure_capacity(&self, env: &worker::Env, chat: &str) -> ApiResult<()> {
+        self.ensure_capacity_for(
+            env,
+            chat,
+            super::capacity::BYTE_HEADROOM,
+            super::capacity::ROW_HEADROOM,
+        )
+        .await
+    }
+    /// The caller passes all growth it will commit without another await. Recheck
+    /// after reservation I/O because receipts may have committed meanwhile.
+    pub async fn ensure_capacity_for(
+        &self,
+        env: &worker::Env,
+        chat: &str,
+        required_bytes: u64,
+        required_rows: u64,
+    ) -> ApiResult<()> {
+        // Reclaim expired replay responses before local or aggregate admission.
+        // Keep this bounded maintenance outside the later growth transaction so
+        // a quota rejection cannot prevent or roll back expiry recovery.
+        self.sql.exec("DELETE FROM receipt_requests WHERE (user_id,request_id) IN (SELECT user_id,request_id FROM receipt_requests WHERE expires_at IS NOT NULL AND expires_at<=? ORDER BY expires_at LIMIT 512)",vec![(Date::now().as_millis() as i64).into()])?;
+        loop {
+            let usage = self.usage()?;
+            if self.capacity_checked.get()
+                && usage.byte_limit.saturating_sub(usage.bytes) >= required_bytes
+                && usage.row_limit.saturating_sub(usage.rows) >= required_rows
+            {
+                return Ok(());
+            }
+            let (bytes, rows) =
+                super::capacity::reserve(env, chat, &usage, required_bytes, required_rows).await?;
+            self.sql.exec(
+                "UPDATE storage_usage SET byte_limit=?,row_limit=? WHERE id=1",
+                vec![(bytes as i64).into(), (rows as i64).into()],
+            )?;
+            self.capacity_checked.set(true);
+        }
+    }
+    /// Same logical-byte charge as storage-quota.sql, including the message event
+    /// and conservative fixed index/SQLite overhead. Updates remain guarded by SQL.
+    pub fn message_growth(row: &Record) -> (u64, u64) {
+        let m = &row.metadata;
+        let mut bytes = 1024 + 128 + "message".len() + row.nonce.len() + row.ciphertext.len();
+        for text in [
+            &m.chat_id,
+            &m.message_id,
+            &m.client_message_id,
+            &m.sender_user_id,
+            &m.sender_device_id,
+            &row.created_at,
+            &m.attachment_ids,
+            &row.fingerprint,
+        ] {
+            bytes += text.len();
+        }
+        for text in [
+            &row.sender_display_name,
+            &m.mutation,
+            &m.reply_to_message_id,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            bytes += text.len();
+        }
+        (bytes as u64, 2)
     }
     pub fn sql(&self) -> SqlStorage {
         self.sql.clone()
@@ -198,7 +320,7 @@ impl Store {
                 {
                     return Err(worker::Error::from(error).into());
                 }
-                value
+                value.map_err(quota_error)
             }
             None => Err(called
                 .err()
@@ -329,34 +451,131 @@ impl Store {
             json!({"chat_id":chat_id,"revision":self.revision()?,"sender_profiles":[],"changes":changes,"next_revision":last,"has_more":events.len()>limit as usize}),
         )
     }
+    pub fn receipt_request_known(&self, user: &str, id: &str) -> ApiResult<bool> {
+        Ok(number(
+            &self.sql,
+            "SELECT COUNT(*) AS n FROM receipt_requests WHERE user_id=? AND request_id=? AND (expires_at IS NULL OR expires_at>?)",
+            vec![
+                user.into(),
+                id.into(),
+                (Date::now().as_millis() as i64).into(),
+            ],
+        )? > 0)
+    }
     pub fn receipts(
         &self,
         user: String,
         entries: Vec<Value>,
         request_id: String,
     ) -> ApiResult<Vec<Value>> {
+        let entries = receipt_entries(entries)?;
+        if !ratchet_core::message::is_uuid(&request_id) {
+            return Err(ApiError::domain("VALIDATION_ERROR", 422));
+        }
+        let canonical = serde_json::to_string(&entries)
+            .map_err(|_| ApiError::domain("VALIDATION_ERROR", 422))?;
+        let fingerprint = format!("sha256:{}", crate::auth::sha256_hex(&canonical));
+        let now = Date::now().as_millis() as i64;
+        // This expired request ID may fall beyond the bounded preflight sweep.
+        // Retire it outside the new transaction; legacy NULL expiries are kept.
+        self.sql.exec("DELETE FROM receipt_requests WHERE user_id=? AND request_id=? AND expires_at IS NOT NULL AND expires_at<=?",vec![user.clone().into(),request_id.clone().into(),now.into()])?;
         self.transaction(move|sql|{
             #[derive(Deserialize)]struct Previous{payload:String,response:String}
-            let payload=serde_json::to_string(&entries).map_err(|_|ApiError::domain("VALIDATION_ERROR",422))?;
             if let Some(old)=all::<Previous>(&sql,"SELECT payload,response FROM receipt_requests WHERE user_id=? AND request_id=?",vec![user.clone().into(),request_id.clone().into()])?.into_iter().next(){
-                if old.payload!=payload{return Err(ApiError::domain("IDEMPOTENCY_CONFLICT",409));}
-                let mut response:Vec<Value>=serde_json::from_str(&old.response).map_err(|_|ApiError::domain("CORRUPT_SYNC_ROW",503))?;for row in &mut response{row["duplicate"]=json!(true);}return Ok(response);
+                // Keep pre-migration exact replay indefinitely. Legacy rows stay
+                // charged; all newly written requests have a documented 30-day TTL.
+                if old.payload!=fingerprint && old.payload!=canonical {return Err(ApiError::domain("IDEMPOTENCY_CONFLICT",409));}
+                let mut response:Vec<Value>=serde_json::from_str(&old.response).map_err(|_|ApiError::domain("CORRUPT_SYNC_ROW",503))?;
+                for row in &mut response{row["duplicate"]=json!(true);}
+                return Ok(response);
             }
+            sql.exec("DELETE FROM receipt_quota WHERE at<=?",vec![(now-10_000).into()])?;
+            if number(&sql,"SELECT COUNT(*) AS n FROM receipt_quota WHERE user_id=?",vec![user.clone().into()])?>=30 || number(&sql,"SELECT COUNT(*) AS n FROM receipt_quota",vec![])?>=300 {
+                return Err(ApiError::retryable("RECEIPT_RATE_LIMITED",429));
+            }
+            sql.exec("INSERT INTO receipt_quota VALUES(?,?)",vec![user.clone().into(),now.into()])?;
             #[derive(Deserialize)]struct Receipt{state:String,revision:u64}
             let mut response=vec![];
             for entry in &entries{
-                let id=entry["message_id"].as_str().ok_or_else(||ApiError::domain("VALIDATION_ERROR",422))?;
-                let incoming=entry["state"].as_str().ok_or_else(||ApiError::domain("VALIDATION_ERROR",422))?;
-                if number(&sql,"SELECT COUNT(*) AS n FROM chat_messages WHERE message_id=?",vec![id.into()])?==0{return Err(ApiError::domain("MESSAGE_NOT_FOUND",404));}
-                if let Some(old)=all::<Receipt>(&sql,"SELECT state,revision FROM receipts WHERE message_id=? AND user_id=?",vec![id.into(),user.clone().into()])?.into_iter().next()&& (old.state=="READ"||old.state==incoming){response.push(json!({"message_id":id,"state":old.state,"revision":old.revision,"duplicate":true}));continue;}
+                let id=&entry.message_id;
+                let incoming=entry.state.as_str();
+                if number(&sql,"SELECT COUNT(*) AS n FROM chat_messages WHERE message_id=?",vec![id.clone().into()])?==0{return Err(ApiError::domain("MESSAGE_NOT_FOUND",404));}
+                if let Some(old)=all::<Receipt>(&sql,"SELECT state,revision FROM receipts WHERE message_id=? AND user_id=?",vec![id.clone().into(),user.clone().into()])?.into_iter().next()&& (old.state=="READ"||old.state==incoming){response.push(json!({"message_id":id,"state":old.state,"revision":old.revision,"duplicate":true}));continue;}
                 let event=json!({"message_id":id,"state":incoming,"user_id":user,"updated_at":now_iso()});
                 sql.exec("INSERT INTO events(kind,payload) VALUES('receipt',?)",vec![event.to_string().into()])?;
                 let revision=number(&sql,"SELECT last_insert_rowid() AS n",vec![])?;
-                sql.exec("INSERT INTO receipts VALUES(?,?,?,?) ON CONFLICT(message_id,user_id) DO UPDATE SET state=excluded.state,revision=excluded.revision",vec![id.into(),user.clone().into(),incoming.into(),(revision as i64).into()])?;
+                sql.exec("INSERT INTO receipts VALUES(?,?,?,?) ON CONFLICT(message_id,user_id) DO UPDATE SET state=excluded.state,revision=excluded.revision",vec![id.clone().into(),user.clone().into(),incoming.into(),(revision as i64).into()])?;
                 response.push(json!({"message_id":id,"state":incoming,"revision":revision,"duplicate":false}));
             }
-            sql.exec("INSERT INTO receipt_requests VALUES(?,?,?,?)",vec![user.into(),request_id.into(),payload.into(),serde_json::to_string(&response).map_err(|_|ApiError::domain("VALIDATION_ERROR",422))?.into()])?;
+            sql.exec("INSERT INTO receipt_requests(user_id,request_id,payload,response,expires_at) VALUES(?,?,?,?,?)",vec![user.into(),request_id.into(),fingerprint.into(),serde_json::to_string(&response).map_err(|_|ApiError::domain("VALIDATION_ERROR",422))?.into(),(now+RECEIPT_REPLAY_MS).into()])?;
             Ok(response)
         })
+    }
+}
+
+/// Existing rows keep their original exact replay behavior. This window applies
+/// only to new compact requests; receipt state remains monotonic after expiry.
+const RECEIPT_REPLAY_MS: i64 = 30 * 24 * 60 * 60 * 1000;
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ReceiptEntry {
+    message_id: String,
+    state: String,
+}
+pub(crate) fn receipt_entries(values: Vec<Value>) -> ApiResult<Vec<ReceiptEntry>> {
+    if values.is_empty() || values.len() > 100 {
+        return Err(ApiError::domain("VALIDATION_ERROR", 422));
+    }
+    let mut seen = HashSet::new();
+    let mut entries = Vec::with_capacity(values.len());
+    for value in values {
+        let entry: ReceiptEntry =
+            serde_json::from_value(value).map_err(|_| ApiError::domain("VALIDATION_ERROR", 422))?;
+        if !ratchet_core::message::is_uuid(&entry.message_id)
+            || !matches!(entry.state.as_str(), "READ" | "DELIVERED")
+            || !seen.insert(entry.message_id.clone())
+        {
+            return Err(ApiError::domain("VALIDATION_ERROR", 422));
+        }
+        entries.push(entry);
+    }
+    Ok(entries)
+}
+fn quota_error(error: ApiError) -> ApiError {
+    if let ApiError::Runtime(cause) = &error {
+        let text = cause.to_string();
+        for code in [
+            "CHAT_STORAGE_QUOTA_EXCEEDED",
+            "RECEIPT_STORAGE_QUOTA_EXCEEDED",
+        ] {
+            if text.contains(code) {
+                return ApiError::domain(code, 409);
+            }
+        }
+    }
+    error
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::*;
+    #[test]
+    fn receipt_payload_rejects_extra_fields_duplicates_and_invalid_states() {
+        let id = "11111111-1111-4111-8111-111111111111";
+        assert!(receipt_entries(vec![json!({"message_id":id,"state":"READ"})]).is_ok());
+        assert!(
+            receipt_entries(vec![
+                json!({"message_id":id,"state":"READ","padding":"unbounded"})
+            ])
+            .is_err()
+        );
+        assert!(
+            receipt_entries(vec![
+                json!({"message_id":id,"state":"READ"}),
+                json!({"message_id":id,"state":"READ"})
+            ])
+            .is_err()
+        );
+        assert!(receipt_entries(vec![json!({"message_id":id,"state":"UNKNOWN"})]).is_err());
     }
 }

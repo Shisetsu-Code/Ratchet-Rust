@@ -1,5 +1,6 @@
 use crate::{
     auth::{self, AuthContext},
+    auth_admission,
     db::Db,
     http::{self, ApiError, ApiResult},
     password::Device,
@@ -83,8 +84,10 @@ pub async fn prepare(request: &mut Request, env: &Env, reauth: bool) -> ApiResul
     let id = http::random_id()?;
     let challenge = random_secret()?;
     let now = http::now_iso();
-    db.run("INSERT INTO portable_key_challenges(challenge_id,kind,challenge,key_id,user_id,pending_device_id,pending_device_name,pending_crypto_identity_public_key,created_at,expires_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
-        &[json!(id),json!(purpose),json!(challenge),json!(input.key_id),json!(user),json!(device),json!(name),json!(key),json!(now),json!(http::iso_at(Date::now().as_millis() as f64+300_000.0))]).await?;
+    let admission =
+        auth_admission::challenge_statement(&db, request, actor.as_ref(), &input.key_id).await?;
+    db.0.batch(vec![admission,db.statement("INSERT INTO portable_key_challenges(challenge_id,kind,challenge,key_id,user_id,pending_device_id,pending_device_name,pending_crypto_identity_public_key,created_at,expires_at,admission_origin) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+        &[json!(id),json!(purpose),json!(challenge),json!(input.key_id),json!(user),json!(device),json!(name),json!(key),json!(now),json!(http::iso_at(Date::now().as_millis() as f64+300_000.0)),json!(auth_admission::origin_hash(request)?)])?]).await.map_err(auth_admission::admission_error)?;
     let mut result = json!({"challenge_id":id,"challenge":challenge,"purpose":purpose,"key_id":input.key_id,"origin":env.var("RP_ORIGIN")?.to_string()});
     if let Some(device) = device {
         result["device_id"] = json!(device);

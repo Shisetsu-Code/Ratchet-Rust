@@ -69,3 +69,7 @@
 
 /* Offscreen containment must not let the flex column shrink message heights. */
 .messages > .bubble { flex-shrink: 0; }
+.history-navigation{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px;color:#64748b;font-size:13px}
+.history-navigation:empty{display:none}
+.history-navigation button{min-height:38px;padding:8px 14px;border:1px solid #cbd5e1;border-radius:18px;background:#fff;color:#334155;font:inherit;cursor:pointer}
+.history-navigation button:disabled{opacity:.6;cursor:wait}

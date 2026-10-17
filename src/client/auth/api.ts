@@ -10,6 +10,7 @@ import { bytesToBase64Url } from '../crypto/local-state/base64url';
 import type { LocalDbSchema } from '../storage/schema';
 import { ApiError, apiFetch } from '../transport/api';
 import { disposePortableKey, signPortableChallenge, unlockPortableKey } from './portable-key';
+import { solvePasswordChallenge } from './admission-proof';
 
 const CeremonyOptionsSchema = z.object({
   challenge_id: z.string().uuid(),
@@ -50,16 +51,33 @@ export async function updateStaffDisplayName(workspaceId: string, displayName: s
   }, (value) => UpdateStaffDisplayNameResponseSchema.parse(value), { retryMode: 'none' });
 }
 
-export async function passwordLoginExisting(loginName: string, password: string, deviceId: string): Promise<PasswordLoginResponse> {
-  return apiFetch('/api/v1/auth/password/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      login_name: loginName,
-      password,
-      device: { mode: 'existing', device_id: deviceId },
-    }),
-  }, (value) => PasswordLoginResponseSchema.parse(value), { retryMode: 'none' });
+const PasswordChallengeSchema = z.object({
+  protocol: z.literal('ratchet-auth-work-v1'), challenge_id: z.string().uuid(),
+  challenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  difficulty: z.number().int().min(18).max(22), expires_at: z.number().int().positive(),
+});
+
+async function passwordLogin(body: Record<string, unknown>, signal?: AbortSignal, path='/api/v1/auth/password/login'): Promise<PasswordLoginResponse> {
+  const send = (payload: Record<string, unknown>) => apiFetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload), ...(signal ? { signal } : {}),
+  }, value => PasswordLoginResponseSchema.parse(value), { retryMode: 'none', timeoutMs: 30_000 });
+  try { return await send(body); }
+  catch (error) {
+    if (!(error instanceof ApiError) || error.type !== 'AUTHENTICATION_PROOF_REQUIRED') throw error;
+    const challenge = await apiFetch('/api/v1/auth/password/challenge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login_name: body.login_name }), ...(signal ? { signal } : {}),
+    }, value => PasswordChallengeSchema.parse(value), { retryMode: 'none' });
+    const proof = await solvePasswordChallenge(challenge, signal);
+    // The proof authorizes one additional admission, never an automatic retry
+    // after credential verification or a bypass of the hard request budget.
+    return send({ ...body, proof });
+  }
+}
+
+export async function passwordLoginExisting(loginName: string, password: string, deviceId: string, signal?: AbortSignal): Promise<PasswordLoginResponse> {
+  return passwordLogin({ login_name: loginName, password, device: { mode: 'existing', device_id: deviceId } }, signal);
 }
 
 export async function passwordLoginNewDevice(
@@ -74,20 +92,14 @@ export async function passwordLoginNewDevice(
   try {
     await persistGeneratedDeviceIdentity(db, deviceId, generated);
     persisted = true;
-    return await apiFetch('/api/v1/auth/password/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        login_name: loginName,
-        password,
-        device: {
-          mode: 'new',
-          device_id: deviceId,
-          display_name: deviceName,
-          crypto_identity_public_key: bytesToBase64Url(generated.keyPair.publicKey),
-        },
-      }),
-    }, (value) => PasswordLoginResponseSchema.parse(value), { retryMode: 'none' });
+    return await passwordLogin({
+      login_name: loginName,
+      password,
+      device: {
+        mode: 'new', device_id: deviceId, display_name: deviceName,
+        crypto_identity_public_key: bytesToBase64Url(generated.keyPair.publicKey),
+      },
+    });
   } catch (error) {
     if (persisted) await db.delete('device_identity', deviceId).catch(() => undefined);
     throw error;
@@ -109,21 +121,13 @@ export async function activatePasswordAccess(
   try {
     await persistGeneratedDeviceIdentity(db, deviceId, generated);
     persisted = true;
-    return await apiFetch('/api/v1/auth/password/activate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        access_token: accessToken,
-        login_name: loginName,
-        password,
-        device: {
-          mode: 'new',
-          device_id: deviceId,
-          display_name: deviceName,
-          crypto_identity_public_key: bytesToBase64Url(generated.keyPair.publicKey),
-        },
-      }),
-    }, (value) => PasswordLoginResponseSchema.parse(value), { retryMode: 'none' });
+    return await passwordLogin({
+      access_token: accessToken, login_name: loginName, password,
+      device: {
+        mode: 'new', device_id: deviceId, display_name: deviceName,
+        crypto_identity_public_key: bytesToBase64Url(generated.keyPair.publicKey),
+      },
+    }, undefined, '/api/v1/auth/password/activate');
   } catch (error) {
     if (persisted) await db.delete('device_identity', deviceId).catch(() => undefined);
     throw error;

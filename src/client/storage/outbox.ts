@@ -26,6 +26,28 @@ export type OutboxTransport = {
 
 type ServerCommit = Pick<SendMessageResponse, 'message_id' | 'client_message_id' | 'revision' | 'accepted_at'>;
 
+/** Read active work in bounded sender order, excluding retained COMMITTED payloads. */
+export async function readChatOutboxBatch(db: IDBPDatabase<LocalDbSchema>, chatId: string, statuses: readonly OutboxStatus[], limit = 32): Promise<PendingOutboxRecord[]> {
+  const records = new Map<string, PendingOutboxRecord>();
+  for (const status of statuses) {
+    const modern = await db.getAllFromIndex('pending_outbox', 'by-chat-status-sequence', IDBKeyRange.bound([chatId, status, 0], [chatId, status, Number.MAX_SAFE_INTEGER]), limit);
+    for (const record of modern) records.set(record.client_message_id, record);
+    // Legacy records without a sender sequence are absent from the compound
+    // index. A bounded pass keeps their existing HTTP recovery path available.
+    const legacy = await db.getAllFromIndex('pending_outbox', 'by-chat-status', IDBKeyRange.only([chatId, status]), limit);
+    for (const record of legacy) if (record.request.sender_sequence === undefined) records.set(record.client_message_id, record);
+  }
+  return [...records.values()].sort((a, b) => (a.request.sender_sequence ?? Number.MAX_SAFE_INTEGER) - (b.request.sender_sequence ?? Number.MAX_SAFE_INTEGER)
+    || a.created_at.localeCompare(b.created_at) || a.client_message_id.localeCompare(b.client_message_id)).slice(0, limit);
+}
+
+export async function hasChatOutboxWork(db: IDBPDatabase<LocalDbSchema>, chatId: string): Promise<boolean> {
+  for (const status of ['PENDING', 'VERIFY_ACCEPTANCE', 'NEEDS_REENCRYPT'] as const) {
+    if (await db.getKeyFromIndex('pending_outbox', 'by-chat-status', [chatId, status])) return true;
+  }
+  return false;
+}
+
 export async function sendPendingOutboxBatch(
   db: IDBPDatabase<LocalDbSchema>,
   records: PendingOutboxRecord[],

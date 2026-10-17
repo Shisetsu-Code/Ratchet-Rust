@@ -1,7 +1,7 @@
 use super::*;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use sha2::{Digest, Sha256};
-use worker::Conditional;
+
 struct Access {
     workspace: String,
     owner: String,
@@ -247,6 +247,8 @@ pub async fn handle(
             if bytes.len() <= 16 {
                 return Err(ApiError::domain("WALLPAPER_TOO_LARGE", 422));
             }
+            let size = bytes.len();
+            let token = crate::http::random_id()?;
             let hash = URL_SAFE_NO_PAD.encode(Sha256::digest(&bytes));
             let key = key(&a, id);
             let mut values = authority_values(auth, chat);
@@ -259,22 +261,31 @@ pub async fn handle(
                 json!(iso_at(
                     worker::Date::now().as_millis() as f64 + 86_400_000.0
                 )),
+                json!(size),
+                json!(token),
             ]);
-            if !changed(db,&format!("INSERT INTO wallpaper_uploads(object_key,workspace_id,owner_admin_user_id,wallpaper_id,device_id,ciphertext_hash,state,expires_at) SELECT ?5,?6,?7,?8,?4,?9,'UPLOADING',?10 WHERE {AUTHORITY} ON CONFLICT DO NOTHING"),&values).await?{return Err(ApiError::domain("WALLPAPER_UPLOAD_CONFLICT",409));}
+            if !changed(db,&format!("INSERT INTO wallpaper_uploads(object_key,workspace_id,owner_admin_user_id,wallpaper_id,device_id,ciphertext_hash,state,expires_at,size,write_token) SELECT ?5,?6,?7,?8,?4,?9,'UPLOADING',?10,?11,?12 WHERE {AUTHORITY} ON CONFLICT DO NOTHING"),&values).await.map_err(|e| storage_error_api(e, "WALLPAPER_UPLOAD_CONFLICT"))?{return Err(ApiError::domain("WALLPAPER_UPLOAD_CONFLICT",409));}
             let bucket = env.bucket("ATTACHMENTS")?;
-            let stored = bucket
-                .put(&key, bytes)
-                .only_if(Conditional {
-                    etag_does_not_match: Some("*".into()),
-                    ..Default::default()
-                })
-                .execute()
-                .await;
+            // Persist the multipart handle before uploading any bytes. Cleanup
+            // can abort that handle, fencing every later part/complete operation.
+            let stored:ApiResult<()> = async {
+                let upload=bucket.create_multipart_upload(&key).execute().await?;
+                let upload_id=upload.upload_id().await;
+                let mut start=authority_values(auth,chat);
+                start.extend([json!(key),json!(token),json!(upload_id)]);
+                if !changed(db,&format!("UPDATE wallpaper_uploads SET upload_id=?7 WHERE object_key=?5 AND state='UPLOADING' AND write_token=?6 AND {AUTHORITY}"),&start).await? {
+                    let _=upload.abort().await;
+                    return Err(ApiError::domain("WALLPAPER_UPLOAD_CONFLICT",409));
+                }
+                let part=upload.upload_part(1,bytes).await?;
+                upload.complete(vec![part]).await?;
+                Ok(())
+            }.await;
             let mut finish = authority_values(auth, chat);
-            finish.push(json!(key));
-            let success=match stored{Ok(Some(_))=>changed(db,&format!("UPDATE wallpaper_uploads SET state='READY' WHERE object_key=?5 AND state='UPLOADING' AND {AUTHORITY}"),&finish).await?,_=>false};
+            finish.extend([json!(key), json!(token)]);
+            let success=match stored{Ok(())=>changed(db,&format!("UPDATE wallpaper_uploads SET state='READY',write_token=NULL WHERE object_key=?5 AND state='UPLOADING' AND write_token=?6 AND {AUTHORITY}"),&finish).await?,_=>false};
             if !success {
-                db.run("UPDATE wallpaper_uploads SET state='ABORTED' WHERE object_key=?1 AND state='UPLOADING'",&[json!(key)]).await?;
+                db.run("UPDATE wallpaper_uploads SET state='ABORTED',write_token=NULL,cleanup_after='' WHERE object_key=?1 AND write_token=?2",&[json!(key),json!(token)]).await?;
                 return Err(ApiError::domain("WALLPAPER_UPLOAD_CONFLICT", 409));
             }
             Ok(Some(Response::empty()?.with_status(204)))

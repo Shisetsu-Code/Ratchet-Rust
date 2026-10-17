@@ -42,6 +42,8 @@ import {
 import { listChats, type ChatSummary } from '../chat/api';
 import { decodeMessageContent, encodeMessageContent } from '../chat/content';
 import { materializeMessageMutations } from '../chat/message-view';
+import { boundVisibleMessages, rememberVisibleChat } from '../chat/message-window';
+import type { HistoryWindowOptions } from '../storage/message-timeline';
 import { scheduleDeliveredReceipts } from '../chat/receipts';
 import { applyRealtimeCommittedMessage } from '../chat/realtime-receive';
 import {
@@ -49,12 +51,14 @@ import {
   refreshRejectedSecureChatMessage,
   warmSecureChatSendContext,
 } from '../chat/secure-send';
-import { committedDisplayCacheKey, loadChatFromEncryptedCache, synchronizeChat, type DisplayMessage } from '../chat/sync';
+import { committedDisplayCacheKey, loadChatFromEncryptedCache, synchronizeChat, type DisplayMessage, type SyncChatResult } from '../chat/sync';
 import { deliverPreparedMessageWsFirst, resumePendingOutboxWsFirst } from '../chat/ws-first-send';
 import { createRecoveryPump } from '../chat/recovery-pump';
 import { BrowserSecureMessagingEngine } from '../crypto/engine';
 import { enablePushNotifications } from '../push/subscription';
 import { openLocalDatabase } from '../storage/db';
+import { readChatOutboxBatch, hasChatOutboxWork } from '../storage/outbox';
+import { confirmOutgoingCacheRevision } from '../storage/outgoing-confirmation';
 import { advanceChatSyncCursor, compareMessageOrder } from '../storage/message-cache';
 import type { JsonSetting, LocalDbSchema, PendingOutboxRecord } from '../storage/schema';
 import { ApiError } from '../transport/api';
@@ -87,6 +91,19 @@ type QueuedMessage = {
 // Workspace discovery has no realtime channel; refresh visible clients promptly.
 const ADMIN_CHAT_REFRESH_MS = 5_000;
 
+function advanceVisibleHistoryWindow(
+  window: SyncChatResult['history'], previous: readonly UiMessage[], next: readonly UiMessage[],
+): SyncChatResult['history'] {
+  const committed = next.filter(message => message.revision > 0);
+  const oldestRevision = committed[0]?.revision ?? window?.oldestRevision ?? null;
+  const newestRevision = committed.at(-1)?.revision ?? window?.newestRevision ?? null;
+  return {
+    oldestRevision, newestRevision,
+    hasOlder: Boolean(window?.hasOlder) || (oldestRevision !== null && previous.some(message => message.revision > 0 && message.revision < oldestRevision)),
+    hasNewer: Boolean(window?.hasNewer),
+  };
+}
+
 export function SecureApp() {
   const [db, setDb] = useState<IDBPDatabase<LocalDbSchema> | null>(null);
   const [appState, setAppState] = useState<AppState>('BOOTING');
@@ -94,7 +111,10 @@ export function SecureApp() {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
-  const messagesById = useMemo(() => new Map(messages.filter(message => message.message_id).map(message => [message.message_id!, message])), [messages]);
+  const [replyPreviews, setReplyPreviews] = useState<UiMessage[]>([]);
+  const messagesById = useMemo(() => new Map([...replyPreviews, ...messages].filter(message => message.message_id).map(message => [message.message_id!, message])), [messages, replyPreviews]);
+  const [historyWindow, setHistoryWindow] = useState<SyncChatResult['history']>();
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [connectivity, setConnectivity] = useState<ConnectivityState>('HTTP_SYNC');
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -135,6 +155,9 @@ export function SecureApp() {
   const realtimeChatIdRef = useRef<string | null>(null);
   const chatListRefreshRef = useRef<Promise<void> | null>(null);
   const syncRefs = useRef(new Map<string, Promise<number>>());
+  const syncControllersRef = useRef(new Map<string, AbortController>());
+  const historyOptionsRef = useRef<HistoryWindowOptions>({});
+  const historyControllerRef = useRef<AbortController | null>(null);
   const revisionRefs = useRef(new Map<string, number>());
   const selectedChatRef = useRef<string | null>(null);
   const sendQueueRef = useRef<QueuedMessage[]>([]);
@@ -155,10 +178,11 @@ export function SecureApp() {
     const decoded = source.map((message) => {
       try {
         const content = decodeMessageContent(message.plaintext);
+        const { plaintext: _plaintext, ...metadata } = message;
         const optimistic = optimisticMessagesRef.current.get(message.client_message_id);
         if (message.revision > 0) optimisticMessagesRef.current.delete(message.client_message_id);
         return {
-          ...message,
+          ...metadata,
           text: content.text,
           attachments: content.attachments,
           ...(message.revision === 0 && optimistic?.delivery_state ? { delivery_state: optimistic.delivery_state } : {}),
@@ -178,15 +202,77 @@ export function SecureApp() {
       ? [...optimisticMessagesRef.current.values()].filter((message) => message.chat_id === chatId && !present.has(message.client_message_id))
       : [];
     const ordered = [...serverMessages, ...optimistic].sort(compareMessageOrder);
-    const next = materializeMessageMutations(ordered);
-    const added = Math.max(0, next.length - messageCountRef.current);
+    const next = boundVisibleMessages(materializeMessageMutations(ordered));
+    const previous = chatId ? renderedChatsRef.current.get(chatId) ?? [] : [];
+    const previousNewest = Math.max(0, ...previous.map(message => message.revision));
+    const added = decoded.filter(message => !message.mutation && message.revision > previousNewest).length;
     messageCountRef.current = next.length;
     if (added > 0 && !stickToBottomRef.current && !forceScrollToBottomRef.current) {
       setUnreadMessageCount((count) => count + added);
     }
-    if (chatId) renderedChatsRef.current.set(chatId, next);
+    if (chatId) rememberVisibleChat(renderedChatsRef.current, chatId, next);
+    if (mode === 'merge') setHistoryWindow(current => advanceVisibleHistoryWindow(current, previous, next));
     setMessages(next);
+    return next;
   }, []);
+
+  const applyHistoryWindow = useCallback((chatId: string, result: SyncChatResult) => {
+    if (selectedChatRef.current !== chatId) {
+      for (const message of [...result.messages, ...(result.replyPreviews ?? [])]) message.plaintext.fill(0);
+      return;
+    }
+    const next = renderMessages(result.messages, 'replace');
+    const visible = next.filter(message => message.revision > 0);
+    const oldest = visible[0]?.revision ?? result.history?.oldestRevision ?? null;
+    setHistoryWindow(result.history ? {
+      ...result.history,
+      oldestRevision: oldest,
+      newestRevision: visible.at(-1)?.revision ?? result.history.newestRevision,
+      hasOlder: result.history.hasOlder || (oldest !== null && result.history.oldestRevision !== null && oldest > result.history.oldestRevision),
+    } : undefined);
+    setReplyPreviews((result.replyPreviews ?? []).map(message => {
+      try {
+        const content = decodeMessageContent(message.plaintext);
+        const { plaintext: _plaintext, ...metadata } = message;
+        return { ...metadata, text: content.text, attachments: content.attachments };
+      } finally { message.plaintext.fill(0); }
+    }));
+  }, [renderMessages]);
+
+  const loadHistoryPage = useCallback(async (options: HistoryWindowOptions = {}) => {
+    const chatId = selectedChatRef.current;
+    if (!db || !session || !chatId) return;
+    historyControllerRef.current?.abort();
+    const controller = new AbortController();
+    historyControllerRef.current = controller;
+    historyOptionsRef.current = options;
+    setHistoryLoading(true);
+    try {
+      const result = await loadChatFromEncryptedCache(db, session.device_id, chatId, revisionRefs.current.get(chatId) ?? 0, { ...options, signal: controller.signal });
+      if (controller.signal.aborted) {
+        for (const message of [...result.messages, ...(result.replyPreviews ?? [])]) message.plaintext.fill(0);
+        return;
+      }
+      applyHistoryWindow(chatId, result);
+      if (options.beforeRevision !== undefined) {
+        forceScrollToBottomRef.current = true;
+        stickToBottomRef.current = true;
+      } else if (options.afterRevision !== undefined) {
+        forceScrollToBottomRef.current = false;
+        stickToBottomRef.current = false;
+        requestAnimationFrame(() => { if (messagesRef.current) messagesRef.current.scrollTop = 0; });
+      } else {
+        forceScrollToBottomRef.current = true;
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted) setError(describeError(cause));
+    } finally {
+      if (historyControllerRef.current === controller) {
+        historyControllerRef.current = null;
+        setHistoryLoading(false);
+      }
+    }
+  }, [db, session, applyHistoryWindow]);
 
   const refreshChats = useCallback((): Promise<void> => {
     if (chatListRefreshRef.current) return chatListRefreshRef.current;
@@ -309,12 +395,19 @@ export function SecureApp() {
     if (!db || !session) return revisionRefs.current.get(chatId) ?? 0;
     const existing = syncRefs.current.get(chatId);
     if (existing) return existing;
+    const controller = new AbortController();
+    syncControllersRef.current.set(chatId, controller);
     const task = (async () => {
       try {
         const incremental = renderedChatsRef.current.has(chatId);
-        const result = await synchronizeChat(db, session, chatId, { incremental, afterRevision: revisionRefs.current.get(chatId) ?? 0 });
-        if (selectedChatRef.current === chatId) {
-          if (!incremental || result.messages.length) renderMessages(result.messages, incremental ? 'merge' : 'replace');
+        const history = historyOptionsRef.current;
+        const result = await synchronizeChat(db, session, chatId, { incremental, afterRevision: revisionRefs.current.get(chatId) ?? 0, history, signal: controller.signal });
+        if (selectedChatRef.current === chatId && historyOptionsRef.current === history && !controller.signal.aborted) {
+          // Each result is a complete materialized window. Replacing it also
+          // removes targets deleted outside the currently displayed page.
+          if (!result.hasMore) applyHistoryWindow(chatId, result);
+          else for (const message of [...result.messages, ...(result.replyPreviews ?? [])]) message.plaintext.fill(0);
+          setHistoryLoading(Boolean(result.hasMore));
           if (result.receiptUpdates?.length) {
             const updates = result.receiptUpdates;
             const rendered = renderedChatsRef.current.get(chatId);
@@ -329,23 +422,25 @@ export function SecureApp() {
           if (result.unavailableMessageCount > 0) {
             setUnavailableHistoryCount((count) => count + result.unavailableMessageCount);
           }
-        }
+        } else for (const message of [...result.messages, ...(result.replyPreviews ?? [])]) message.plaintext.fill(0);
         revisionRefs.current.set(chatId, result.revision);
         setError(null);
         return result.revision;
       } catch (cause) {
+        if (controller.signal.aborted) throw cause;
         try {
-          const cached = await loadChatFromEncryptedCache(db, session.device_id, chatId, revisionRefs.current.get(chatId) ?? 0);
-          if (selectedChatRef.current === chatId) renderMessages(cached.messages, 'merge');
+          const cached = await loadChatFromEncryptedCache(db, session.device_id, chatId, revisionRefs.current.get(chatId) ?? 0, { ...historyOptionsRef.current, signal: controller.signal });
+          applyHistoryWindow(chatId, cached);
         } catch {}
         throw cause;
       } finally {
         syncRefs.current.delete(chatId);
+        if (syncControllersRef.current.get(chatId) === controller) syncControllersRef.current.delete(chatId);
       }
     })();
     syncRefs.current.set(chatId, task);
     return task;
-  }, [db, session, renderMessages]);
+  }, [db, session, applyHistoryWindow]);
 
   useEffect(() => {
     if (appState !== 'READY' || session?.role !== 'ADMIN') return;
@@ -366,6 +461,12 @@ export function SecureApp() {
 
   useEffect(() => {
     selectedChatRef.current = selectedChat;
+    historyControllerRef.current?.abort();
+    for (const [chatId, controller] of syncControllersRef.current) if (chatId !== selectedChat) controller.abort();
+    historyOptionsRef.current = {};
+    setHistoryWindow(undefined);
+    setHistoryLoading(false);
+    setReplyPreviews([]);
     messageCountRef.current = 0;
     stickToBottomRef.current = true;
     forceScrollToBottomRef.current = true;
@@ -379,7 +480,7 @@ export function SecureApp() {
     const present = new Set(confirmed.map((message) => message.client_message_id));
     const optimistic = [...optimisticMessagesRef.current.values()]
       .filter((message) => message.chat_id === selectedChat && !present.has(message.client_message_id));
-    const next = materializeMessageMutations([...confirmed, ...optimistic].sort(compareMessageOrder));
+    const next = boundVisibleMessages(materializeMessageMutations([...confirmed, ...optimistic].sort(compareMessageOrder)));
     messageCountRef.current = next.length;
     setMessages(next);
   }, [selectedChat]);
@@ -455,12 +556,24 @@ export function SecureApp() {
     };
 
     const optimistic = optimisticMessagesRef.current.get(clientMessageId);
-    if (optimistic) optimisticMessagesRef.current.set(clientMessageId, transform(optimistic));
+    if (optimistic) {
+      if (result.status === 'COMMITTED') {
+        const prior = renderedChatsRef.current.get(result.chat_id) ?? [];
+        rememberVisibleChat(renderedChatsRef.current, result.chat_id, materializeMessageMutations([
+          ...prior.filter(message => message.client_message_id !== clientMessageId), transform(optimistic),
+        ].sort(compareMessageOrder)));
+        optimisticMessagesRef.current.delete(clientMessageId);
+      } else optimisticMessagesRef.current.set(clientMessageId, transform(optimistic));
+    }
 
     const rendered = renderedChatsRef.current.get(result.chat_id);
     if (rendered) renderedChatsRef.current.set(result.chat_id, rendered.map(transform).sort(compareMessageOrder));
     if (selectedChatRef.current === result.chat_id) {
-      setMessages((current) => current.map(transform).sort(compareMessageOrder));
+      setMessages((current) => {
+        const next = current.map(transform).sort(compareMessageOrder);
+        setHistoryWindow(window => advanceVisibleHistoryWindow(window, current, next));
+        return next;
+      });
     }
 
     if (result.status === 'COMMITTED') {
@@ -489,9 +602,7 @@ export function SecureApp() {
 
   const recoverChatOutbox = useCallback(async (chatId: string): Promise<void> => {
     if (!db || !session || !navigator.onLine) return;
-    const rejected = (await db.getAllFromIndex('pending_outbox', 'by-chat', chatId))
-      .filter((record) => record.status === 'NEEDS_REENCRYPT')
-      .sort((left, right) => (left.request.sender_sequence ?? Number.MAX_SAFE_INTEGER) - (right.request.sender_sequence ?? Number.MAX_SAFE_INTEGER));
+    const rejected = await readChatOutboxBatch(db, chatId, ['NEEDS_REENCRYPT']);
     for (const record of rejected) {
       const refreshed = await refreshRejectedSecureChatMessage(db, {
         chat_id: chatId,
@@ -516,8 +627,7 @@ export function SecureApp() {
     const pump = createRecoveryPump(async () => {
       if (!navigator.onLine) return false;
       await recoverChatOutbox(chatId);
-      const records = await db.getAllFromIndex('pending_outbox', 'by-chat', chatId);
-      return records.some(record => ['PENDING', 'VERIFY_ACCEPTANCE', 'NEEDS_REENCRYPT'].includes(record.status));
+      return hasChatOutboxWork(db, chatId);
     }, cause => setError(describeError(cause)));
     recoveryPumpRef.current = pump;
     return () => { pump.stop(); if (recoveryPumpRef.current === pump) recoveryPumpRef.current = null; };
@@ -529,11 +639,14 @@ export function SecureApp() {
     realtimeChatIdRef.current = null;
     if (appState !== 'READY' || !selectedChat || !db || !session) return;
     let cancelled = false;
+    const controller = new AbortController();
     void (async () => {
       try {
-        const cached = await loadChatFromEncryptedCache(db, session.device_id, selectedChat, revisionRefs.current.get(selectedChat) ?? 0);
-        if (!cancelled && selectedChatRef.current === selectedChat) renderMessages(cached.messages);
+        const cached = await loadChatFromEncryptedCache(db, session.device_id, selectedChat, revisionRefs.current.get(selectedChat) ?? 0, { signal: controller.signal });
+        if (!cancelled) applyHistoryWindow(selectedChat, cached);
+        else for (const message of [...cached.messages, ...(cached.replyPreviews ?? [])]) message.plaintext.fill(0);
       } catch {}
+      if (cancelled) return 0;
       return syncSelected(selectedChat);
     })().then((initialRevision) => {
       if (cancelled) return;
@@ -555,6 +668,10 @@ export function SecureApp() {
           revisionRefs.current.set(event.chat_id, event.revision);
         },
         onContiguousOwnCommit: async (ack) => {
+          // ACK resolution and outbox promotion race on separate promises.
+          // Ensure the local cache exists at this revision before marking it
+          // contiguous, so a history projection cannot skip this own message.
+          await confirmOutgoingCacheRevision(db, selectedChat, ack.client_message_id, ack.message_id, ack.revision);
           await advanceChatSyncCursor(db, selectedChat, ack.revision);
           revisionRefs.current.set(selectedChat, ack.revision);
           setChats((current) => current.map((chat) => chat.chat_id === selectedChat
@@ -568,8 +685,14 @@ export function SecureApp() {
           setChats((current) => current.map((chat) => chat.chat_id === event.chat_id
             ? { ...chat, revision: Math.max(chat.revision, event.revision) }
             : chat));
-          if (selectedChatRef.current === event.chat_id) renderMessages([display], 'merge');
-          else display.plaintext.fill(0);
+          if (selectedChatRef.current === event.chat_id) {
+            if ((historyOptionsRef.current.beforeRevision !== undefined || historyOptionsRef.current.afterRevision !== undefined) && !display.mutation) {
+              display.plaintext.fill(0);
+              setUnreadMessageCount(count => count + 1);
+            } else {
+              renderMessages([display], 'merge');
+            }
+          } else display.plaintext.fill(0);
         },
         onEvent: (event) => {
           if (!('revision' in event)) return;
@@ -587,11 +710,14 @@ export function SecureApp() {
     }).catch((cause) => { if (!cancelled) setError(describeError(cause)); });
     return () => {
       cancelled = true;
+      controller.abort();
+      syncControllersRef.current.get(selectedChat)?.abort();
+      historyControllerRef.current?.abort();
       realtimeRef.current?.stop();
       realtimeRef.current = null;
       realtimeChatIdRef.current = null;
     };
-  }, [appState, selectedChat, db, session, syncSelected, renderMessages, recoverChatOutbox]);
+  }, [appState, selectedChat, db, session, syncSelected, renderMessages, applyHistoryWindow, recoverChatOutbox]);
 
   useEffect(() => {
     if (appState !== 'READY' || !selectedChat || !db || !session || connectivity === 'OFFLINE') return;
@@ -665,6 +791,11 @@ export function SecureApp() {
 
   const enqueueMessage = () => {
     if (!selectedChat || !session || (!draft.trim() && preparedAttachments.length === 0) || busy) return;
+    if (sendQueueRef.current.length + deliveriesRef.current.size >= 64 || optimisticMessagesRef.current.size >= 128) {
+      setError('Hay muchos mensajes esperando envío. Esperá a que termine la cola.');
+      return;
+    }
+    if (historyOptionsRef.current.beforeRevision !== undefined || historyOptionsRef.current.afterRevision !== undefined) void loadHistoryPage();
     const clientMessageId = uuidv7();
     const text = draft.trim();
     const attachments = preparedAttachments.map((entry) => entry.descriptor);
@@ -695,7 +826,8 @@ export function SecureApp() {
     };
     optimisticMessagesRef.current.set(clientMessageId, optimistic);
     setMessages((current) => {
-      const next = [...current, optimistic].sort(compareMessageOrder);
+      const next = boundVisibleMessages([...current, optimistic].sort(compareMessageOrder));
+      setHistoryWindow(window => advanceVisibleHistoryWindow(window, current, next));
       messageCountRef.current = next.length;
       return next;
     });
@@ -710,6 +842,7 @@ export function SecureApp() {
   };
 
   const scrollToLatest = () => {
+    if (historyOptionsRef.current.beforeRevision !== undefined || historyOptionsRef.current.afterRevision !== undefined) void loadHistoryPage();
     const container = messagesRef.current;
     if (!container) return;
     forceScrollToBottomRef.current = false;
@@ -770,6 +903,7 @@ export function SecureApp() {
 
   const mutateMessage = useCallback((message: UiMessage, type: 'EDIT' | 'TOMBSTONE') => {
     if (!selectedChat || !session || !message.message_id || session.role === 'CUSTOMER' || message.deleted) return;
+    if (sendQueueRef.current.length + deliveriesRef.current.size >= 64 || optimisticMessagesRef.current.size >= 128) { setError('Esperá a que termine la cola de mensajes.'); return; }
     const text = type === 'EDIT' ? window.prompt('Editar mensaje', message.text)?.trim() : '';
     if (type === 'EDIT' && !text) return;
     if (type === 'TOMBSTONE' && !window.confirm('¿Borrar este mensaje para todos?')) return;
@@ -800,7 +934,7 @@ export function SecureApp() {
     };
     optimisticMessagesRef.current.set(clientMessageId, optimisticMutation);
     setMessages((current) => {
-      const next = materializeMessageMutations([...current, optimisticMutation].sort(compareMessageOrder));
+      const next = boundVisibleMessages(materializeMessageMutations([...current, optimisticMutation].sort(compareMessageOrder)));
       messageCountRef.current = next.length;
       return next;
     });
@@ -985,8 +1119,10 @@ export function SecureApp() {
         {unavailableHistoryCount > 0 && <div className="history-notice" role="note"><strong>Este navegador se agregó después.</strong> {unavailableHistoryCount === 1 ? 'Un mensaje anterior' : `${unavailableHistoryCount} mensajes anteriores`} no estaba cifrado para este dispositivo. Los mensajes nuevos llegan automáticamente.</div>}
         <div className={`messages ${wallpaperClassName(chatWallpaper)}`} style={wallpaperObjectUrl ? { '--chat-wallpaper-image': `url(${JSON.stringify(wallpaperObjectUrl)})` } as CSSProperties : undefined} ref={messagesRef} onScroll={(event) => { const element = event.currentTarget; const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 80; stickToBottomRef.current = atBottom; if (atBottom) setUnreadMessageCount(0); }}>
           {!selectedChat && <div className="empty"><h2>Sin conversación seleccionada</h2></div>}
-          {selectedChat && messages.length === 0 && <div className="empty"><h2>Sin mensajes todavía</h2><p>Escribí un mensaje para comenzar.</p></div>}
+          {selectedChat && <div className="history-navigation">{historyWindow?.hasOlder && <button disabled={historyLoading} onClick={() => void loadHistoryPage({ beforeRevision: historyWindow.oldestRevision! })}>Mensajes anteriores</button>}{historyLoading && <span role="status">Sincronizando historial…</span>}</div>}
+          {selectedChat && !historyLoading && messages.length === 0 && <div className="empty"><h2>Sin mensajes todavía</h2><p>Escribí un mensaje para comenzar.</p></div>}
           {messages.map((message) => <MessageBubble key={message.cache_key} message={message} replied={message.reply_to_message_id ? messagesById.get(message.reply_to_message_id) : null} senderLabel={message.sender_user_id === session.user_id ? 'Vos' : message.sender_display_name ?? (session.role === 'CUSTOMER' ? selectedChatSummary?.support_display_name ?? 'Soporte' : selectedChatSummary?.customer_display_name ?? 'Cliente')} isCustomer={session.role === 'CUSTOMER'} localFiles={localAttachmentFilesRef.current} onReply={setReplyingTo} onMutate={mutateMessage} onPreview={setAttachmentPreview} />)}
+          {selectedChat && historyWindow?.hasNewer && <div className="history-navigation"><button disabled={historyLoading} onClick={() => void loadHistoryPage({ afterRevision: historyWindow.newestRevision! })}>Mensajes siguientes</button><button disabled={historyLoading} onClick={() => void loadHistoryPage()}>Ir al último mensaje</button></div>}
         </div>
         {unreadMessageCount > 0 && <button className="new-messages-button" onClick={scrollToLatest}>{unreadMessageCount === 1 ? '1 mensaje nuevo' : `${unreadMessageCount} mensajes nuevos`} ↓</button>}
         {selectedChat && <div className="composer-wrap">{replyingTo && <div className="replying-banner"><span><strong>Respondiendo</strong>{replyingTo.text || (replyingTo.attachments.length ? 'Adjunto' : 'Mensaje')}</span><button onClick={() => setReplyingTo(null)} aria-label="Cancelar respuesta">×</button></div>}{uploadProgress && <div className="upload-progress" role="status"><span>Subiendo {uploadProgress.name}</span><progress max={100} value={uploadProgress.percent} /><b>{uploadProgress.percent}%</b></div>}{preparedAttachments.length > 0 && <div className="prepared-attachments">{preparedAttachments.map((entry) => <span key={entry.descriptor.file_id}><button className="prepared-attachment-open" onClick={() => setAttachmentPreview({ kind: 'local', file: entry.file })}>Ver {entry.name}</button><button onClick={() => void removePreparedAttachment(entry)} aria-label={`Quitar ${entry.name}`}>×</button></span>)}</div>}<div className="composer"><label className="attach-button" title="Adjuntar foto o PDF (máximo 10 MB)">＋<input type="file" accept={ALLOWED_ATTACHMENT_ACCEPT} multiple hidden onChange={(event) => { void uploadFiles(event.currentTarget.files); event.currentTarget.value = ''; }} disabled={busy} /></label><textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Mensaje" rows={1} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); enqueueMessage(); } }} /><button onPointerDown={(event) => event.preventDefault()} onClick={enqueueMessage} disabled={busy || (!draft.trim() && preparedAttachments.length === 0)}>Enviar</button></div>{queuedMessageCount > 0 && <div className={`send-queue-status${sendQueuePaused ? ' paused' : ''}`} role="status">{sendQueuePaused ? 'Hay mensajes sin preparar.' : 'Protegiendo mensajes…'}{sendQueuePaused && <button onClick={() => { sendQueuePausedRef.current = false; setSendQueuePaused(false); drainSendQueueRef.current(); }}>Reintentar</button>}</div>}</div>}

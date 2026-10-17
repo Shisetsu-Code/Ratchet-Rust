@@ -157,7 +157,9 @@ pub async fn handle(request: &mut Request, env: &Env) -> ApiResult<Option<Respon
                 expires_at: http::iso_at(Date::now().as_millis() as f64 + 120_000.0),
                 consumed: None,
             };
-            db.run("INSERT INTO owner_console_challenges(challenge_id,challenge,owner_key_id,owner_user_id,workspace_id,origin,operation_digest,operation_type,target_id,created_at,expires_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",&[json!(row.challenge_id),json!(row.challenge),json!(row.owner_key_id),json!(row.owner_user_id),json!(row.workspace_id),json!(row.origin),json!(row.operation_digest),json!(row.operation_type),json!(row.target_id),json!(http::now_iso()),json!(row.expires_at)]).await?;
+            let admission =
+                crate::auth_admission::challenge_statement(&db, request, None, key).await?;
+            db.0.batch(vec![admission,db.statement("INSERT INTO owner_console_challenges(challenge_id,challenge,owner_key_id,owner_user_id,workspace_id,origin,operation_digest,operation_type,target_id,created_at,expires_at,admission_origin) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",&[json!(row.challenge_id),json!(row.challenge),json!(row.owner_key_id),json!(row.owner_user_id),json!(row.workspace_id),json!(row.origin),json!(row.operation_digest),json!(row.operation_type),json!(row.target_id),json!(http::now_iso()),json!(row.expires_at),json!(crate::auth_admission::origin_hash(request)?)])?]).await.map_err(crate::auth_admission::admission_error)?;
             Ok(Some(http::json(&challenge_value(&row))?))
         }
         "/api/v1/owner-console/complete" => {
@@ -287,7 +289,9 @@ pub async fn prepare_control(env: &Env, input: &Value) -> ApiResult<MutationPlan
         {
             return Err(ApiError::domain("KEY_ID_TAKEN", 409));
         }
-        let credential = password::prepare_credential(text(op, "new_password")?).await?;
+        let credential =
+            password::prepare_credential(&db, &row.owner_user_id, text(op, "new_password")?)
+                .await?;
         let guard = http::random_id()?;
         statements.push(db.statement(&format!("INSERT INTO auth_commit_guards(assertion_id,valid) SELECT ?1,CASE WHEN {predicate} THEN 1 ELSE 0 END"),&[json!(guard),json!(user),json!(row.workspace_id)])?);
         statements.push(db.statement("UPDATE password_credentials SET algorithm=?2,iterations=?3,salt=?4,verifier=?5,failed_attempts=0,next_allowed_at=NULL,updated_at=?6 WHERE user_id=?1",&[json!(user),json!(credential.algorithm),json!(credential.iterations),json!(credential.salt),json!(credential.verifier),json!(now)])?);

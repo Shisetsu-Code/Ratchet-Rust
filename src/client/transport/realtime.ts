@@ -29,6 +29,7 @@ type PreconnectedRealtimeSocket = {
   chatId: string;
   socket: WebSocket;
   events: RealtimeServerEvent[];
+  bytes: number;
   timer: number | null;
   onMessage: (event: MessageEvent) => void;
   onClose: () => void;
@@ -48,8 +49,18 @@ const MAX_BACKOFF_MS = 30_000;
 const HTTP_FALLBACK_POLL_MIN_MS = 1_500;
 const HTTP_FALLBACK_POLL_MAX_MS = 30_000;
 const PRECONNECT_TTL_MS = 15_000;
-const PRECONNECT_MAX_EVENTS = 256;
+const MAX_BUFFERED_EVENTS = 64;
+const MAX_BUFFERED_EVENT_BYTES = 2 * 1024 * 1024;
+// One valid encrypted envelope plus bounded metadata fits comfortably here.
+// Check the wire string before JSON parsing as well as retained event sizes.
+const MAX_SERVER_EVENT_BYTES = 1024 * 1024;
 let preconnectedRealtime: PreconnectedRealtimeSocket | null = null;
+
+function retainedEventBytes(event: RealtimeServerEvent): number {
+  if (event.type === 'message.committed') return 4096 + 2 * (event.envelope.header.length + event.envelope.ciphertext.length);
+  if (event.type === 'presence.changed') return 1024 + event.online_user_ids.length * 80;
+  return 1024;
+}
 
 /**
  * Start the authenticated WebSocket handshake while local cache/crypto warm-up
@@ -67,6 +78,10 @@ export function preconnectRealtimeSocket(chatId: string): void {
   let entry!: PreconnectedRealtimeSocket;
   const onMessage = (event: MessageEvent) => {
     if (preconnectedRealtime !== entry || typeof event.data !== 'string') return;
+    if (event.data.length * 2 > MAX_SERVER_EVENT_BYTES) {
+      releasePreconnectedRealtime(entry, true);
+      return;
+    }
     let value: unknown;
     try {
       value = JSON.parse(event.data);
@@ -75,11 +90,13 @@ export function preconnectRealtimeSocket(chatId: string): void {
     }
     const parsed = RealtimeServerEventSchema.safeParse(value);
     if (!parsed.success) return;
-    if (entry.events.length >= PRECONNECT_MAX_EVENTS) {
+    const bytes = retainedEventBytes(parsed.data);
+    if (entry.events.length >= MAX_BUFFERED_EVENTS || entry.bytes + bytes > MAX_BUFFERED_EVENT_BYTES) {
       releasePreconnectedRealtime(entry, true);
       return;
     }
     entry.events.push(parsed.data);
+    entry.bytes += bytes;
   };
   const onClose = () => releasePreconnectedRealtime(entry, false);
   const onError = () => {
@@ -89,6 +106,7 @@ export function preconnectRealtimeSocket(chatId: string): void {
     chatId,
     socket,
     events: [],
+    bytes: 0,
     timer: null,
     onMessage,
     onClose,
@@ -119,6 +137,8 @@ function releasePreconnectedRealtime(entry: PreconnectedRealtimeSocket, closeSoc
   entry.socket.removeEventListener('message', entry.onMessage);
   entry.socket.removeEventListener('close', entry.onClose);
   entry.socket.removeEventListener('error', entry.onError);
+  entry.events.length = 0;
+  entry.bytes = 0;
   if (preconnectedRealtime === entry) preconnectedRealtime = null;
   if (closeSocket && (entry.socket.readyState === WebSocket.CONNECTING || entry.socket.readyState === WebSocket.OPEN)) {
     try { entry.socket.close(1000, 'preconnect released'); } catch {}
@@ -165,6 +185,8 @@ export class ChatRealtimeClient {
   private requestedRevision: number;
   private readonly pendingAcks = new Map<string, PendingAck>();
   private readonly committedBuffer = new Map<number, RealtimeCommittedMessage | RealtimeMessageAck | Extract<RealtimeServerEvent, { type: 'receipt.committed' }>>();
+  private committedBufferBytes = 0;
+  private reconcileWithoutBuffer = false;
   private committedDrain: Promise<void> | null = null;
 
   constructor(private readonly options: RealtimeOptions) {
@@ -187,6 +209,7 @@ export class ChatRealtimeClient {
     this.readyForMessages = false;
     this.serverReadyRevision = null;
     this.clearTimers();
+    this.clearCommittedBuffer();
     this.rejectPendingAcks(new RealtimeUnavailableError('Realtime client stopped'));
     this.socket?.close(1000, 'client stop');
     this.socket = null;
@@ -205,6 +228,7 @@ export class ChatRealtimeClient {
     this.readyForMessages = false;
     this.serverReadyRevision = null;
     this.clearTimers();
+    this.clearCommittedBuffer();
     this.rejectPendingAcks(new RealtimeUnavailableError('Network went offline'));
     this.socket?.close();
     this.socket = null;
@@ -261,6 +285,10 @@ export class ChatRealtimeClient {
     });
     socket.addEventListener('message', (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
+      if (event.data.length * 2 > MAX_SERVER_EVENT_BYTES) {
+        socket.close(1009, 'realtime event too large');
+        return;
+      }
       let value: unknown;
       try {
         value = JSON.parse(event.data);
@@ -276,6 +304,7 @@ export class ChatRealtimeClient {
         this.socket = null;
         this.readyForMessages = false;
         this.serverReadyRevision = null;
+        this.clearCommittedBuffer();
         this.stopHeartbeat();
         this.clearResyncTimer();
         this.rejectPendingAcks(new RealtimeUnavailableError('Realtime socket closed before ACK'));
@@ -342,6 +371,8 @@ export class ChatRealtimeClient {
   private tryEnterRealtime(socket: WebSocket): void {
     if (this.stopped || this.socket !== socket || socket.readyState !== WebSocket.OPEN) return;
     if (this.serverReadyRevision === null || this.appliedRevision < this.serverReadyRevision) return;
+    if (this.reconcileWithoutBuffer && this.appliedRevision < this.requestedRevision) return;
+    this.reconcileWithoutBuffer = false;
     if (!this.readyForMessages) {
       this.readyForMessages = true;
       this.stopFallbackPolling();
@@ -353,7 +384,21 @@ export class ChatRealtimeClient {
   private enqueueCommittedMessage(socket: WebSocket, event: RealtimeCommittedMessage | RealtimeMessageAck | Extract<RealtimeServerEvent, { type: 'receipt.committed' }>): void {
     if (event.revision <= this.appliedRevision) return;
     this.requestedRevision = Math.max(this.requestedRevision, event.revision);
+    const previous = this.committedBuffer.get(event.revision);
+    const nextBytes = this.committedBufferBytes - (previous ? retainedEventBytes(previous) : 0) + retainedEventBytes(event);
+    if (this.reconcileWithoutBuffer || (!previous && this.committedBuffer.size >= MAX_BUFFERED_EVENTS)
+      || nextBytes > MAX_BUFFERED_EVENT_BYTES) {
+      // ACK promises were resolved before reaching this queue. Drop only this
+      // optional transport copy; the authoritative journal and outbox remain
+      // intact. Retain the highest hint and reconcile from the applied cursor.
+      this.clearCommittedBuffer();
+      this.reconcileWithoutBuffer = true;
+      this.readyForMessages = false;
+      void this.ensureHttpSync(socket);
+      return;
+    }
     this.committedBuffer.set(event.revision, event);
+    this.committedBufferBytes = nextBytes;
     if (this.committedDrain) return;
     const drain = this.drainCommittedMessages(socket).finally(() => {
       if (this.committedDrain === drain) this.committedDrain = null;
@@ -373,7 +418,7 @@ export class ChatRealtimeClient {
   private async drainCommittedMessages(socket: WebSocket): Promise<void> {
     while (!this.stopped && this.socket === socket && socket.readyState === WebSocket.OPEN) {
       for (const revision of this.committedBuffer.keys()) {
-        if (revision <= this.appliedRevision) this.committedBuffer.delete(revision);
+        if (revision <= this.appliedRevision) this.removeCommittedEvent(revision);
       }
 
       const nextRevision = this.appliedRevision + 1;
@@ -385,7 +430,7 @@ export class ChatRealtimeClient {
           else if (next.type === 'message.committed' && this.options.onCommittedMessage) await this.options.onCommittedMessage(next);
           else throw new Error('Realtime committed-message handler is unavailable');
           this.appliedRevision = next.revision;
-          this.committedBuffer.delete(next.revision);
+          this.removeCommittedEvent(next.revision);
           continue;
         } catch {
           this.requestedRevision = Math.max(this.requestedRevision, next.revision);
@@ -396,7 +441,7 @@ export class ChatRealtimeClient {
         const before = this.appliedRevision;
         await this.ensureHttpSync(socket);
         for (const revision of this.committedBuffer.keys()) {
-          if (revision <= this.appliedRevision) this.committedBuffer.delete(revision);
+          if (revision <= this.appliedRevision) this.removeCommittedEvent(revision);
         }
         if (this.appliedRevision <= before) break;
         continue;
@@ -412,6 +457,18 @@ export class ChatRealtimeClient {
     return false;
   }
 
+  private removeCommittedEvent(revision: number): void {
+    const event = this.committedBuffer.get(revision);
+    if (!event) return;
+    this.committedBufferBytes -= retainedEventBytes(event);
+    this.committedBuffer.delete(revision);
+  }
+
+  private clearCommittedBuffer(): void {
+    this.committedBuffer.clear();
+    this.committedBufferBytes = 0;
+  }
+
   private ensureHttpSync(socket: WebSocket, force = false): Promise<void> {
     const existing = this.syncingBySocket.get(socket);
     if (existing) return existing;
@@ -419,7 +476,7 @@ export class ChatRealtimeClient {
     const task = (async () => {
       try {
         let mustSync = force;
-        while (mustSync || this.requestedRevision > this.appliedRevision) {
+        while (!this.stopped && this.socket === socket && (mustSync || this.requestedRevision > this.appliedRevision)) {
           mustSync = false;
           const before = this.appliedRevision;
           const requested = this.requestedRevision;

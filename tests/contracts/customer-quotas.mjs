@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import WebSocket from 'ws';
-import {base,fixture,localSql,api} from './fixtures.mjs';
+import {base,fixture,localSql,api,edgeHeaders} from './fixtures.mjs';
 
 async function scenario(){
   const owner=await fixture(),chat=randomUUID(),actor={user_id:randomUUID(),device_id:randomUUID()},secret=randomBytes(32).toString('base64url');
@@ -32,7 +32,7 @@ async function wait(predicate,peer){
 }
 
 test('CUSTOMER burst quota is shared by WebSocket and HTTP, preserves retries and exact recovery',{timeout:45000},async t=>{
-  const s=await scenario(),socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${s.chat}/realtime`,{closeTimeout:1000,headers:{Cookie:s.actor.cookie,Origin:base}});
+  const s=await scenario(),socket=new WebSocket(base.replace(/^http/,'ws')+`/api/v1/chats/${s.chat}/realtime`,{closeTimeout:1000,headers:{Cookie:s.actor.cookie,Origin:base,...edgeHeaders}});
   const peer={socket,events:[],errors:[]};t.after(()=>socket.terminate());
   socket.on('error',error=>peer.errors.push(error));
   socket.on('message',raw=>{try{peer.events.push(JSON.parse(raw.toString()));}catch(error){peer.errors.push(error);}});
